@@ -37,6 +37,9 @@ public class Journey {
     @Column(nullable = false, length = 32)
     private JourneyState state;
 
+    @Column(name = "arrived_at")
+    private Instant arrivedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -89,6 +92,19 @@ public class Journey {
 
     public JourneyState getState() {
         return state;
+    }
+
+    public Instant getArrivedAt() {
+        return arrivedAt;
+    }
+
+    public JourneyState applyEvent(JourneyEvent event, JourneyStateMachine stateMachine) {
+        state = stateMachine.transition(state, event);
+        return state;
+    }
+
+    void markArrivedAt(Instant arrivedAt) {
+        this.arrivedAt = arrivedAt;
     }
 
     public Instant getCreatedAt() {

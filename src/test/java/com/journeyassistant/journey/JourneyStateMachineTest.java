@@ -17,7 +17,8 @@ class JourneyStateMachineTest {
     @Test
     void permitsEveryDefinedTransition() {
         Map<TransitionCase, JourneyState> expected = Map.of(
-                new TransitionCase(JourneyState.TRACKING, JourneyEvent.DESTINATION_REACHED), JourneyState.CALLING,
+                new TransitionCase(JourneyState.TRACKING, JourneyEvent.DESTINATION_REACHED), JourneyState.ARRIVED,
+                new TransitionCase(JourneyState.ARRIVED, JourneyEvent.CALL_STARTED), JourneyState.CALLING,
                 new TransitionCase(JourneyState.CALLING, JourneyEvent.ACCEPT), JourneyState.ACCEPTED,
                 new TransitionCase(JourneyState.CALLING, JourneyEvent.RETRY), JourneyState.RETRY_SCHEDULED,
                 new TransitionCase(JourneyState.CALLING, JourneyEvent.REJECT), JourneyState.REJECTED,
@@ -57,6 +58,7 @@ class JourneyStateMachineTest {
     private boolean isValid(JourneyState state, JourneyEvent event) {
         return switch (state) {
             case TRACKING -> event == JourneyEvent.DESTINATION_REACHED;
+            case ARRIVED -> event == JourneyEvent.CALL_STARTED;
             case CALLING -> event == JourneyEvent.ACCEPT
                     || event == JourneyEvent.RETRY
                     || event == JourneyEvent.REJECT;

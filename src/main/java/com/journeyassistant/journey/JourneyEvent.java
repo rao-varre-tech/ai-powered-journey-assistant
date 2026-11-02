@@ -2,6 +2,7 @@ package com.journeyassistant.journey;
 
 public enum JourneyEvent {
     DESTINATION_REACHED,
+    CALL_STARTED,
     ACCEPT,
     RETRY,
     REJECT,
