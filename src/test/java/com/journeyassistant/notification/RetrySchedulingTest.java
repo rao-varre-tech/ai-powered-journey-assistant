@@ -27,6 +27,8 @@ class RetrySchedulingTest {
         JourneyRepository journeys = mock(JourneyRepository.class);
         RetryScheduler scheduler = mock(RetryScheduler.class);
         when(attempts.findByProviderCallIdForUpdate("CA1")).thenReturn(Optional.of(attempt));
+        when(attempts.findByProviderCallId("CA1")).thenReturn(Optional.of(attempt));
+        when(attempts.findTopByJourney_IdOrderByAttemptNumberDesc(id)).thenReturn(Optional.of(attempt));
         when(journeys.findByIdForUpdate(id)).thenReturn(Optional.of(journey));
         when(attempt.getJourney()).thenReturn(journey);
         when(attempt.getAttemptNumber()).thenReturn(1);

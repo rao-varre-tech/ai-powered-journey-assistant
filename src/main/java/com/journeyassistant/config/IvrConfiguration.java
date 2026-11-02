@@ -78,10 +78,11 @@ public class IvrConfiguration {
     @Bean
     TwilioWebhookSignatureValidator signatureValidator(
             @Value("${ivr.provider:fake}") String provider,
+            @Value("${notification.provider:fake}") String notificationProvider,
             @Value("${ivr.signature-validation-enabled:false}") boolean enabled,
             @Value("${twilio.auth-token:}") String authToken,
             @Value("${twilio.public-base-url:}") String publicBaseUrl) {
-        if (!enabled && !"fake".equalsIgnoreCase(provider))
+        if (!enabled && (!"fake".equalsIgnoreCase(provider) || !"fake".equalsIgnoreCase(notificationProvider)))
             throw new IllegalStateException("Twilio signature validation cannot be disabled outside the fake provider");
         if (enabled && (authToken.isBlank() || publicBaseUrl.isBlank()))
             throw new IllegalStateException("Signature validation requires TWILIO_AUTH_TOKEN and PUBLIC_BASE_URL");

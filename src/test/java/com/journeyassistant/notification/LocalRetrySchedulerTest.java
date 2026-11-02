@@ -5,13 +5,12 @@ import org.springframework.scheduling.TaskScheduler;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 class LocalRetrySchedulerTest {
-    @Test void schedulesCallbackAtRequestedDelay() {
+    @Test @SuppressWarnings("unchecked") void schedulesCallbackAtRequestedDelay() {
         TaskScheduler scheduler = mock(TaskScheduler.class);
         IvrCallService calls = mock(IvrCallService.class);
         org.springframework.beans.factory.ObjectProvider<NotificationService> notifications = mock(org.springframework.beans.factory.ObjectProvider.class);

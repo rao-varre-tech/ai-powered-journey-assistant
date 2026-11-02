@@ -125,6 +125,8 @@ class NotificationServiceTest {
                     Optional.ofNullable(records.get(invocation.getArgument(1))));
             when(repository.findByProviderMessageIdForUpdate(any())).thenAnswer(invocation -> records.values().stream()
                     .filter(message -> invocation.getArgument(0).equals(message.getProviderMessageId())).findFirst());
+            when(repository.findByProviderMessageId(any())).thenAnswer(invocation -> records.values().stream()
+                    .filter(message -> invocation.getArgument(0).equals(message.getProviderMessageId())).findFirst());
             when(repository.saveAndFlush(any())).thenAnswer(invocation -> {
                 JourneyMessage record = invocation.getArgument(0);
                 records.put(record.getChannel(), record);

@@ -120,11 +120,15 @@ public class NotificationAttempt {
         startedAt = Instant.now();
     }
 
-    public void updateStatus(NotificationAttemptStatus status) {
+    public boolean updateStatus(NotificationAttemptStatus status) {
+        if (status == null || this.status == NotificationAttemptStatus.COMPLETED
+                || this.status == NotificationAttemptStatus.FAILED) return false;
+        if (status == NotificationAttemptStatus.PENDING) return false;
         this.status = status;
         if (status == NotificationAttemptStatus.COMPLETED || status == NotificationAttemptStatus.FAILED) {
             completedAt = Instant.now();
         }
+        return true;
     }
 
     public void recordDigit(String digit) {

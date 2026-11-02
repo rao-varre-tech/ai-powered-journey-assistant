@@ -9,6 +9,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface JourneyMessageRepository extends JpaRepository<JourneyMessage, UUID> {
+    @Query("select message from JourneyMessage message where message.providerMessageId = :messageSid")
+    Optional<JourneyMessage> findByProviderMessageId(@Param("messageSid") String messageSid);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select message from JourneyMessage message where message.journey.id = :journeyId and message.channel = :channel")
     Optional<JourneyMessage> findByJourneyAndChannelForUpdate(@Param("journeyId") UUID journeyId,

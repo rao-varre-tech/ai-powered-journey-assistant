@@ -28,7 +28,7 @@ public class IvrTwimlFactory {
                     .hangup(new Hangup.Builder().build()).build().toXml();
         }
         String confirmation = switch (digit) {
-            case "1" -> "Thank you. You will receive your ride link by SMS. Goodbye.";
+            case "1" -> "Thank you. Your ride link will be sent shortly. Goodbye.";
             case "2" -> "We will call you again in five minutes. Goodbye.";
             default -> "You will not receive any more calls for this journey. Goodbye.";
         };

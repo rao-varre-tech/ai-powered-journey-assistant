@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 import java.time.Duration;
+import java.util.Objects;
 
 @Service
 public class IvrWebhookService {
@@ -33,9 +34,13 @@ public class IvrWebhookService {
 
     @Transactional
     public String processDigit(UUID journeyId, String callSid, String digit) {
-        NotificationAttempt attempt = attempts.findByProviderCallIdForUpdate(callSid).orElseThrow();
+        if (callSid == null || callSid.isBlank() || journeyId == null) throw new IllegalArgumentException("Journey and call ids are required");
+        NotificationAttempt lookup = attempts.findByProviderCallId(callSid).orElseThrow();
         Journey journey = journeys.findByIdForUpdate(journeyId).orElseThrow();
-        if (!attempt.getJourney().getId().equals(journeyId)) throw new IllegalArgumentException("Call does not belong to journey");
+        NotificationAttempt attempt = attempts.findByProviderCallIdForUpdate(callSid).orElseThrow();
+        if (!lookup.getJourney().getId().equals(journeyId)
+                || !attempt.getJourney().getId().equals(journeyId)) throw new IllegalArgumentException("Call does not belong to journey");
+        if (!isLatestAttempt(attempt)) return twiml.responseForDigit(digit == null ? "" : digit, journeyId, attempt.getInvalidDigitCount());
         if (digit == null || digit.length() != 1) digit = "";
         if (digit.equals(attempt.getLastProcessedDigit()))
             return twiml.responseForDigit(digit, journeyId, attempt.getInvalidDigitCount());
@@ -68,6 +73,9 @@ public class IvrWebhookService {
 
     @Transactional
     public void processStatus(String callSid, String callStatus) {
+        if (callSid == null || callSid.isBlank()) throw new IllegalArgumentException("Call id is required");
+        NotificationAttempt lookup = attempts.findByProviderCallId(callSid).orElseThrow();
+        Journey journey = journeys.findByIdForUpdate(lookup.getJourney().getId()).orElseThrow();
         NotificationAttempt attempt = attempts.findByProviderCallIdForUpdate(callSid).orElseThrow();
         NotificationAttemptStatus mapped = switch (callStatus == null ? "" : callStatus.toLowerCase()) {
             case "completed" -> NotificationAttemptStatus.COMPLETED;
@@ -75,9 +83,8 @@ public class IvrWebhookService {
             case "in-progress", "ringing", "queued", "initiated" -> NotificationAttemptStatus.IN_PROGRESS;
             default -> attempt.getStatus();
         };
-        attempt.updateStatus(mapped);
-        if (mapped == NotificationAttemptStatus.FAILED) {
-            Journey journey = journeys.findByIdForUpdate(attempt.getJourney().getId()).orElseThrow();
+        boolean statusChanged = attempt.updateStatus(mapped);
+        if (statusChanged && mapped == NotificationAttemptStatus.FAILED && isLatestAttempt(attempt)) {
             if (!isFinal(journey.getState()) && journey.getState() == JourneyState.CALLING) {
                 if (retriesUsed(attempt) >= maxRetries) {
                     journey.applyEvent(JourneyEvent.RETRIES_EXHAUSTED, states);
@@ -92,4 +99,9 @@ public class IvrWebhookService {
     private boolean isFinal(JourneyState state) { return state == JourneyState.ACCEPTED || state == JourneyState.DECLINED || state == JourneyState.NO_RESPONSE; }
 
     private int retriesUsed(NotificationAttempt attempt) { return Math.max(0, attempt.getAttemptNumber() - 1); }
+
+    private boolean isLatestAttempt(NotificationAttempt attempt) {
+        return attempts.findTopByJourney_IdOrderByAttemptNumberDesc(attempt.getJourney().getId())
+                .map(latest -> Objects.equals(latest.getId(), attempt.getId())).orElse(false);
+    }
 }

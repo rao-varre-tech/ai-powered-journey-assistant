@@ -72,6 +72,11 @@ public class NotificationService {
 
     @Transactional
     public void processStatus(String messageSid, String rawStatus) {
+        if (messageSid == null || messageSid.isBlank()) return;
+        JourneyMessage lookup = messages.findByProviderMessageId(messageSid).orElse(null);
+        if (lookup == null) return;
+        Journey journey = journeys.findByIdForUpdate(lookup.getJourney().getId()).orElse(null);
+        if (journey == null) return;
         JourneyMessage message = messages.findByProviderMessageIdForUpdate(messageSid).orElse(null);
         if (message == null) return;
         MessageDeliveryStatus status = MessageDeliveryStatus.fromTwilio(rawStatus);
@@ -79,7 +84,6 @@ public class NotificationService {
         if (message.getChannel() == MessageChannelType.WHATSAPP
                 && strategy == NotificationStrategy.WHATSAPP_THEN_SMS
                 && (status == MessageDeliveryStatus.FAILED || status == MessageDeliveryStatus.UNDELIVERED)) {
-            Journey journey = journeys.findByIdForUpdate(message.getJourney().getId()).orElseThrow();
             if (journey.hasNotificationConsent() && journey.getState() == JourneyState.ACCEPTED) {
                 sendSmsFallback(journey, messageBody());
             }

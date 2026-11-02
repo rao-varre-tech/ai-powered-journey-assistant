@@ -16,7 +16,7 @@ class IvrTwimlFactoryTest {
     }
 
     @Test void eachDigitReturnsConfirmationAndHangup() {
-        assertTrue(factory.responseForDigit("1", id, 0).contains("ride link by SMS"));
+        assertTrue(factory.responseForDigit("1", id, 0).contains("ride link will be sent shortly"));
         assertTrue(factory.responseForDigit("2", id, 0).contains("five minutes"));
         assertTrue(factory.responseForDigit("3", id, 0).toLowerCase().contains("any more calls"),
                 factory.responseForDigit("3", id, 0));

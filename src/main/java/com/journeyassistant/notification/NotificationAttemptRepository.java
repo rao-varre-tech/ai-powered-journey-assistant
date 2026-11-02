@@ -16,6 +16,8 @@ public interface NotificationAttemptRepository extends JpaRepository<Notificatio
 
     Optional<NotificationAttempt> findByProviderCallId(String providerCallId);
 
+    Optional<NotificationAttempt> findTopByJourney_IdOrderByAttemptNumberDesc(UUID journeyId);
+
     long countByJourney_Id(UUID journeyId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

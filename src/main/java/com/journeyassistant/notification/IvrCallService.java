@@ -8,7 +8,6 @@ import com.journeyassistant.journey.JourneyStateMachine;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -50,8 +49,14 @@ public class IvrCallService {
     }
 
     private String placeCall(Journey journey, UUID journeyId, long count) {
+        if (journey.getTravellerPhone() == null || journey.getTravellerPhone().isBlank()) {
+            throw new IllegalStateException("Journey traveller phone is missing");
+        }
         NotificationAttempt attempt = attempts.save(new NotificationAttempt(journey, (int) count + 1, Instant.now()));
         String callSid = client.placeCall(journeyId, journey.getTravellerPhone());
+        if (callSid == null || callSid.isBlank()) {
+            throw new IllegalStateException("IVR provider returned an empty call id");
+        }
         attempt.assignProviderCallId(callSid);
         return callSid;
     }
