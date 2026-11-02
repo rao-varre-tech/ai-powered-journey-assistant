@@ -6,5 +6,6 @@ public enum JourneyEvent {
     ACCEPT,
     RETRY,
     REJECT,
-    RETRY_DUE
+    RETRY_DUE,
+    RETRIES_EXHAUSTED
 }

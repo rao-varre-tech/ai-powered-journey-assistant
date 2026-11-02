@@ -26,11 +26,13 @@ Copy the HTTPS forwarding origin (for example `https://example.ngrok-free.app`) 
 - Create a journey with your verified phone number, destination coordinates, and a geofence radius.
 - Send a location update inside the destination radius and confirm Twilio calls the verified phone.
 - Press **1** and confirm the call says a ride link SMS will follow and hangs up; check the journey becomes `ACCEPTED`.
-- Repeat with a new journey and press **2**; check the state becomes `RETRY_SCHEDULED`. A scheduler must trigger the due retry for the follow-up call; this IVR change does not add Cloud Tasks dispatch.
+- Repeat with a new journey and press **2**; check the state becomes `RETRY_SCHEDULED`, then verify a follow-up call is placed after five minutes by the active scheduler profile.
 - Repeat with a new journey and press **3**; check the state becomes `DECLINED` and no later retry can place a call.
-- Let a call time out, then inspect the status callback and call attempt record. Confirm no-answer is recorded and a retry is scheduled only while under `IVR_MAX_ATTEMPTS`.
+- Let a call time out, then inspect the status callback and call attempt record. Confirm no-answer is recorded and a retry is scheduled only while under `IVR_MAX_RETRIES`; after three retries the journey becomes `NO_RESPONSE`.
 - Send one invalid digit and confirm the prompt repeats once; send another invalid digit and confirm the call says goodbye and hangs up.
 
 ## Implementation assumptions
 
-`docs/spec.md` does not define a retry limit, so `IVR_MAX_ATTEMPTS` defaults to 3 total outbound calls and can be changed by environment configuration. The five-minute retry scheduler is outside this change; option 2 records `RETRY_SCHEDULED`, but a Cloud Tasks adapter must dispatch the later call. The Twilio Java 13.1.0 API was checked against its source: `Call.creator(...)` returns top-level `CallCreator`, and TwiML builders use `VoiceResponse`, `Gather`, `Say`, and `Hangup`. The implementation calls `create(TwilioRestClient)` so its client can be mocked in tests; it makes no network call in tests.
+The retry limit is three retries per journey (up to four calls including the first call). `IVR_MAX_RETRIES` overrides the default. The `local` Spring profile schedules five-minute retries in process; the `gcp` profile creates Cloud Tasks HTTP tasks. For GCP set `GCP_PROJECT_ID`, `GCP_TASKS_LOCATION`, `GCP_TASKS_QUEUE`, and `GCP_TASKS_INVOKER_SERVICE_ACCOUNT`, plus `PUBLIC_BASE_URL`, and deploy Cloud Run with unauthenticated access disabled. Grant the configured service account permission to invoke the service; Cloud Tasks uses an OIDC token for `/internal/tasks/journeys/{id}/retry`. Both schedulers re-check the journey state before placing another call. Tests mock the Cloud Tasks and Twilio clients and make no external calls.
+
+The Twilio Java 13.1.0 API was checked against its source: `Call.creator(...)` returns top-level `CallCreator`, and TwiML builders use `VoiceResponse`, `Gather`, `Say`, and `Hangup`. The implementation calls `create(TwilioRestClient)` so its client can be mocked in tests.

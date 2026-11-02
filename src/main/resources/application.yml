@@ -1,6 +1,8 @@
 spring:
   application:
     name: journey-assistant
+  profiles:
+    default: local
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/journey_assistant}
     username: ${DATABASE_USERNAME:journey}
@@ -15,13 +17,19 @@ server:
   port: ${SERVER_PORT:8080}
 ivr:
   provider: ${IVR_PROVIDER:fake}
-  max-attempts: ${IVR_MAX_ATTEMPTS:3}
+  max-retries: ${IVR_MAX_RETRIES:3}
   signature-validation-enabled: ${IVR_SIGNATURE_VALIDATION_ENABLED:false}
 twilio:
   account-sid: ${TWILIO_ACCOUNT_SID:}
   auth-token: ${TWILIO_AUTH_TOKEN:}
   from-number: ${TWILIO_FROM_NUMBER:}
   public-base-url: ${PUBLIC_BASE_URL:}
+gcp:
+  tasks:
+    project-id: ${GCP_PROJECT_ID:}
+    location: ${GCP_TASKS_LOCATION:}
+    queue: ${GCP_TASKS_QUEUE:}
+    invoker-service-account: ${GCP_TASKS_INVOKER_SERVICE_ACCOUNT:}
 management:
   endpoints:
     web:

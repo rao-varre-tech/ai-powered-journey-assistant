@@ -36,6 +36,11 @@ public class IvrTwimlFactory {
                 .hangup(new Hangup.Builder().build()).build().toXml();
     }
 
+    public String noMoreRetries() {
+        return new VoiceResponse.Builder().say(new Say.Builder("We cannot retry this call again. Goodbye.").build())
+                .hangup(new Hangup.Builder().build()).build().toXml();
+    }
+
     private Gather gather(UUID id, Say say) {
         return new Gather.Builder().numDigits(1).timeout(8).action("/webhooks/twilio/gather?journeyId=" + id)
                 .method(HttpMethod.POST).say(say).build();

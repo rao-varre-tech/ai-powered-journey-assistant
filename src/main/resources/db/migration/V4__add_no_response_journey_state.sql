@@ -1,0 +1,4 @@
+ALTER TABLE journeys DROP CONSTRAINT ck_journeys_state;
+ALTER TABLE journeys ADD CONSTRAINT ck_journeys_state CHECK (state IN (
+    'TRACKING', 'ARRIVED', 'CALLING', 'RETRY_SCHEDULED', 'ACCEPTED', 'DECLINED', 'REJECTED', 'NO_RESPONSE'
+));

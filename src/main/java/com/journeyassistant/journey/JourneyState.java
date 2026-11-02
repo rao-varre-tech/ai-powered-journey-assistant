@@ -7,5 +7,6 @@ public enum JourneyState {
     RETRY_SCHEDULED,
     ACCEPTED,
     DECLINED,
+    NO_RESPONSE,
     REJECTED
 }

@@ -22,7 +22,9 @@ class JourneyStateMachineTest {
                 new TransitionCase(JourneyState.CALLING, JourneyEvent.ACCEPT), JourneyState.ACCEPTED,
                 new TransitionCase(JourneyState.CALLING, JourneyEvent.RETRY), JourneyState.RETRY_SCHEDULED,
                 new TransitionCase(JourneyState.CALLING, JourneyEvent.REJECT), JourneyState.DECLINED,
-                new TransitionCase(JourneyState.RETRY_SCHEDULED, JourneyEvent.RETRY_DUE), JourneyState.CALLING
+                new TransitionCase(JourneyState.RETRY_SCHEDULED, JourneyEvent.RETRY_DUE), JourneyState.CALLING,
+                new TransitionCase(JourneyState.RETRY_SCHEDULED, JourneyEvent.RETRIES_EXHAUSTED), JourneyState.NO_RESPONSE,
+                new TransitionCase(JourneyState.CALLING, JourneyEvent.RETRIES_EXHAUSTED), JourneyState.NO_RESPONSE
         );
 
         expected.forEach((transition, nextState) -> assertEquals(
@@ -61,9 +63,10 @@ class JourneyStateMachineTest {
             case ARRIVED -> event == JourneyEvent.CALL_STARTED;
             case CALLING -> event == JourneyEvent.ACCEPT
                     || event == JourneyEvent.RETRY
-                    || event == JourneyEvent.REJECT;
-            case RETRY_SCHEDULED -> event == JourneyEvent.RETRY_DUE;
-            case ACCEPTED, DECLINED, REJECTED -> false;
+                    || event == JourneyEvent.REJECT
+                    || event == JourneyEvent.RETRIES_EXHAUSTED;
+            case RETRY_SCHEDULED -> event == JourneyEvent.RETRY_DUE || event == JourneyEvent.RETRIES_EXHAUSTED;
+            case ACCEPTED, DECLINED, NO_RESPONSE, REJECTED -> false;
         };
     }
 
