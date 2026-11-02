@@ -29,7 +29,7 @@ public class IvrCallService {
     @Transactional
     public String placeCall(UUID journeyId) {
         Journey journey = journeys.findByIdForUpdate(journeyId).orElseThrow();
-        if (journey.getState() != JourneyState.ARRIVED) return null;
+        if (!journey.hasNotificationConsent() || journey.getState() != JourneyState.ARRIVED) return null;
         long count = attempts.countByJourney_Id(journeyId);
         journey.applyEvent(JourneyEvent.CALL_STARTED, states);
         return placeCall(journey, journeyId, count);
@@ -38,7 +38,7 @@ public class IvrCallService {
     @Transactional
     public String runScheduledRetry(UUID journeyId) {
         Journey journey = journeys.findByIdForUpdate(journeyId).orElseThrow();
-        if (journey.getState() != JourneyState.RETRY_SCHEDULED) return null;
+        if (!journey.hasNotificationConsent() || journey.getState() != JourneyState.RETRY_SCHEDULED) return null;
         long count = attempts.countByJourney_Id(journeyId);
         int retriesAlreadyPlaced = Math.max(0, (int) count - 1);
         if (retriesAlreadyPlaced >= maxRetries) {

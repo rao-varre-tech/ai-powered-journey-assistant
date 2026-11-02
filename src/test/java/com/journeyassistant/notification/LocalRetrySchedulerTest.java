@@ -14,8 +14,9 @@ class LocalRetrySchedulerTest {
     @Test void schedulesCallbackAtRequestedDelay() {
         TaskScheduler scheduler = mock(TaskScheduler.class);
         IvrCallService calls = mock(IvrCallService.class);
+        org.springframework.beans.factory.ObjectProvider<NotificationService> notifications = mock(org.springframework.beans.factory.ObjectProvider.class);
         UUID id = UUID.randomUUID();
-        LocalRetryScheduler retries = new LocalRetryScheduler(scheduler, calls);
+        LocalRetryScheduler retries = new LocalRetryScheduler(scheduler, calls, notifications);
 
         retries.scheduleRetry(id, 1, Duration.ofMinutes(5));
 

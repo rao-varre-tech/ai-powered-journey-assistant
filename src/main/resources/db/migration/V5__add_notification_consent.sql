@@ -1,0 +1,2 @@
+ALTER TABLE journeys ADD COLUMN notification_consent BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE journeys ADD COLUMN consent_timestamp TIMESTAMPTZ;

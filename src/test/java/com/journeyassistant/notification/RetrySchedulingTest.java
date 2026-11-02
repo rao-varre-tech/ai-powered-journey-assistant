@@ -33,7 +33,8 @@ class RetrySchedulingTest {
         when(attempt.getJourney().getId()).thenReturn(id);
         when(journey.getState()).thenReturn(JourneyState.CALLING);
         when(attempt.getInvalidDigitCount()).thenReturn(0);
-        IvrWebhookService service = new IvrWebhookService(journeys, attempts, new JourneyStateMachine(), new IvrTwimlFactory(), scheduler, 3);
+        IvrWebhookService service = new IvrWebhookService(journeys, attempts, new JourneyStateMachine(), new IvrTwimlFactory(),
+                scheduler, mock(NotificationService.class), 3);
 
         String twiml = service.processDigit(id, "CA1", "2");
 
@@ -65,6 +66,7 @@ class RetrySchedulingTest {
         Journey journey = mock(Journey.class);
         when(journeys.findByIdForUpdate(id)).thenReturn(Optional.of(journey));
         when(journey.getState()).thenReturn(JourneyState.RETRY_SCHEDULED);
+        when(journey.hasNotificationConsent()).thenReturn(true);
         when(journey.getTravellerPhone()).thenReturn("+15550001111");
         when(attempts.countByJourney_Id(id)).thenReturn(1L);
         when(attempts.save(any(NotificationAttempt.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -84,6 +86,7 @@ class RetrySchedulingTest {
         Journey journey = mock(Journey.class);
         when(journeys.findByIdForUpdate(id)).thenReturn(Optional.of(journey));
         when(journey.getState()).thenReturn(JourneyState.RETRY_SCHEDULED);
+        when(journey.hasNotificationConsent()).thenReturn(true);
         when(attempts.countByJourney_Id(id)).thenReturn(4L);
         IvrCallService calls = new IvrCallService(journeys, attempts, client, new JourneyStateMachine(), 3);
 

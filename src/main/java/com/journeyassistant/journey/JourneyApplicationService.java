@@ -31,8 +31,14 @@ public class JourneyApplicationService {
     @Transactional
     public Journey createJourney(String userPhone, double destinationLatitude,
                                  double destinationLongitude, int geofenceRadiusMeters) {
+        return createJourney(userPhone, destinationLatitude, destinationLongitude, geofenceRadiusMeters, false);
+    }
+
+    @Transactional
+    public Journey createJourney(String userPhone, double destinationLatitude,
+                                 double destinationLongitude, int geofenceRadiusMeters, boolean notificationConsent) {
         return journeyRepository.save(new Journey(
-                userPhone, destinationLatitude, destinationLongitude, geofenceRadiusMeters));
+                userPhone, destinationLatitude, destinationLongitude, geofenceRadiusMeters, notificationConsent));
     }
 
     @Transactional(readOnly = true)

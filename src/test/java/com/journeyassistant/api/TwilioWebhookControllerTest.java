@@ -2,6 +2,7 @@ package com.journeyassistant.api;
 
 import com.journeyassistant.notification.IvrTwimlFactory;
 import com.journeyassistant.notification.IvrWebhookService;
+import com.journeyassistant.notification.NotificationService;
 import com.journeyassistant.notification.TwilioWebhookSignatureValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,8 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.UUID;
+import java.util.Map;
+import java.util.TreeMap;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -24,7 +27,8 @@ class TwilioWebhookControllerTest {
 
     @BeforeEach void setup() {
         mvc = MockMvcBuilders.standaloneSetup(new TwilioWebhookController(new IvrTwimlFactory(),
-                mock(IvrWebhookService.class), new TwilioWebhookSignatureValidator(true, TOKEN, "https://journey.example"))).build();
+                mock(IvrWebhookService.class), mock(NotificationService.class),
+                new TwilioWebhookSignatureValidator(true, TOKEN, "https://journey.example"))).build();
     }
 
     @Test void acceptsValidTwilioSignature() throws Exception {
@@ -43,9 +47,33 @@ class TwilioWebhookControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test void messageStatusEndpointValidatesTheFormSignature() throws Exception {
+        String url = "https://journey.example/webhooks/twilio/message-status";
+        Map<String, String> form = Map.of("MessageSid", "SM123", "MessageStatus", "delivered");
+        mvc.perform(post("/webhooks/twilio/message-status")
+                        .contentType("application/x-www-form-urlencoded")
+                        .content("MessageSid=SM123&MessageStatus=delivered")
+                        .header("X-Twilio-Signature", signature(url, form)))
+                .andExpect(status().isOk());
+    }
+
+    @Test void messageStatusEndpointRejectsInvalidSignature() throws Exception {
+        mvc.perform(post("/webhooks/twilio/message-status")
+                        .contentType("application/x-www-form-urlencoded")
+                        .content("MessageSid=SM123&MessageStatus=delivered")
+                        .header("X-Twilio-Signature", "bad"))
+                .andExpect(status().isForbidden());
+    }
+
     private String signature(String url) throws Exception {
+        return signature(url, Map.of());
+    }
+
+    private String signature(String url, Map<String, String> form) throws Exception {
         Mac mac = Mac.getInstance("HmacSHA1");
         mac.init(new SecretKeySpec(TOKEN.getBytes(StandardCharsets.UTF_8), "HmacSHA1"));
-        return Base64.getEncoder().encodeToString(mac.doFinal(url.getBytes(StandardCharsets.UTF_8)));
+        StringBuilder data = new StringBuilder(url);
+        new TreeMap<>(form).forEach((key, value) -> data.append(key).append(value));
+        return Base64.getEncoder().encodeToString(mac.doFinal(data.toString().getBytes(StandardCharsets.UTF_8)));
     }
 }

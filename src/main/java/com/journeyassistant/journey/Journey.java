@@ -40,6 +40,12 @@ public class Journey {
     @Column(name = "arrived_at")
     private Instant arrivedAt;
 
+    @Column(name = "notification_consent", nullable = false)
+    private boolean notificationConsent;
+
+    @Column(name = "consent_timestamp")
+    private Instant consentTimestamp;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -51,11 +57,18 @@ public class Journey {
 
     public Journey(String travellerPhone, double destinationLatitude, double destinationLongitude,
                    int geofenceRadiusMeters) {
+        this(travellerPhone, destinationLatitude, destinationLongitude, geofenceRadiusMeters, false);
+    }
+
+    public Journey(String travellerPhone, double destinationLatitude, double destinationLongitude,
+                   int geofenceRadiusMeters, boolean notificationConsent) {
         this.travellerPhone = travellerPhone;
         this.destinationLatitude = destinationLatitude;
         this.destinationLongitude = destinationLongitude;
         this.geofenceRadiusMeters = geofenceRadiusMeters;
         this.state = JourneyState.TRACKING;
+        this.notificationConsent = notificationConsent;
+        this.consentTimestamp = notificationConsent ? Instant.now() : null;
     }
 
     @PrePersist
@@ -97,6 +110,10 @@ public class Journey {
     public Instant getArrivedAt() {
         return arrivedAt;
     }
+
+    public boolean hasNotificationConsent() { return notificationConsent; }
+
+    public Instant getConsentTimestamp() { return consentTimestamp; }
 
     public JourneyState applyEvent(JourneyEvent event, JourneyStateMachine stateMachine) {
         state = stateMachine.transition(state, event);

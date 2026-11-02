@@ -19,10 +19,18 @@ ivr:
   provider: ${IVR_PROVIDER:fake}
   max-retries: ${IVR_MAX_RETRIES:3}
   signature-validation-enabled: ${IVR_SIGNATURE_VALIDATION_ENABLED:false}
+notification:
+  provider: ${NOTIFICATION_PROVIDER:fake}
+  strategy: ${NOTIFICATION_STRATEGY:sms}
+  fallback-timeout: ${WHATSAPP_FALLBACK_TIMEOUT:60s}
+  ride-link: ${RIDE_LINK:}
 twilio:
   account-sid: ${TWILIO_ACCOUNT_SID:}
   auth-token: ${TWILIO_AUTH_TOKEN:}
   from-number: ${TWILIO_FROM_NUMBER:}
+  sms-from: ${TWILIO_SMS_FROM:}
+  whatsapp-from: ${TWILIO_WHATSAPP_FROM:}
+  whatsapp-content-sid: ${TWILIO_WHATSAPP_CONTENT_SID:}
   public-base-url: ${PUBLIC_BASE_URL:}
 gcp:
   tasks:

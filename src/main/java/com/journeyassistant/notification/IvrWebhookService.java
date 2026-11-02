@@ -18,13 +18,16 @@ public class IvrWebhookService {
     private final JourneyStateMachine states;
     private final IvrTwimlFactory twiml;
     private final RetryScheduler retryScheduler;
+    private final NotificationService notificationService;
     private final int maxRetries;
 
     public IvrWebhookService(JourneyRepository journeys, NotificationAttemptRepository attempts,
                              JourneyStateMachine states, IvrTwimlFactory twiml, RetryScheduler retryScheduler,
+                             NotificationService notificationService,
                              @Value("${ivr.max-retries:3}") int maxRetries) {
         this.journeys = journeys; this.attempts = attempts; this.states = states; this.twiml = twiml;
         this.retryScheduler = retryScheduler;
+        this.notificationService = notificationService;
         this.maxRetries = maxRetries;
     }
 
@@ -39,7 +42,12 @@ public class IvrWebhookService {
         attempt.recordDigit(digit);
         boolean retriesExhausted = false;
         switch (digit) {
-            case "1" -> { if (!isFinal(journey.getState()) && journey.getState() == JourneyState.CALLING) journey.applyEvent(JourneyEvent.ACCEPT, states); }
+            case "1" -> {
+                if (!isFinal(journey.getState()) && journey.getState() == JourneyState.CALLING) {
+                    journey.applyEvent(JourneyEvent.ACCEPT, states);
+                    notificationService.sendRideLink(journeyId);
+                }
+            }
             case "2" -> {
                 if (!isFinal(journey.getState()) && journey.getState() == JourneyState.CALLING) {
                     if (retriesUsed(attempt) >= maxRetries) {

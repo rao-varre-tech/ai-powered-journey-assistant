@@ -26,7 +26,7 @@ class IvrWebhookServiceTest {
         when(attempt.getLastProcessedDigit()).thenReturn("1");
         when(attempt.getInvalidDigitCount()).thenReturn(0);
         IvrWebhookService service = new IvrWebhookService(journeys, attempts, new JourneyStateMachine(), new IvrTwimlFactory(),
-                mock(RetryScheduler.class), 3);
+                mock(RetryScheduler.class), mock(NotificationService.class), 3);
 
         String xml = service.processDigit(id, "CA123", "1");
 

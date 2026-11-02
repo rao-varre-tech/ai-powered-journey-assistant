@@ -3,6 +3,7 @@ package com.journeyassistant.api;
 import com.journeyassistant.notification.IvrTwimlFactory;
 import com.journeyassistant.notification.IvrWebhookService;
 import com.journeyassistant.notification.TwilioWebhookSignatureValidator;
+import com.journeyassistant.notification.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,10 +23,11 @@ public class TwilioWebhookController {
     private final IvrTwimlFactory twiml;
     private final IvrWebhookService webhooks;
     private final TwilioWebhookSignatureValidator signatures;
+    private final NotificationService notifications;
 
-    public TwilioWebhookController(IvrTwimlFactory twiml, IvrWebhookService webhooks,
+    public TwilioWebhookController(IvrTwimlFactory twiml, IvrWebhookService webhooks, NotificationService notifications,
                                    TwilioWebhookSignatureValidator signatures) {
-        this.twiml = twiml; this.webhooks = webhooks; this.signatures = signatures;
+        this.twiml = twiml; this.webhooks = webhooks; this.notifications = notifications; this.signatures = signatures;
     }
 
     @PostMapping(value = "/voice", produces = MediaType.APPLICATION_XML_VALUE)
@@ -56,6 +58,25 @@ public class TwilioWebhookController {
             HttpServletRequest request) {
         if (!valid(request, params, signature)) return forbidden();
         webhooks.processStatus(callSid, status);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body("<Response/>");
+    }
+
+    @PostMapping(value = "/message-status", produces = MediaType.APPLICATION_XML_VALUE)
+    public ResponseEntity<String> messageStatus(@RequestParam(name = "MessageSid") String messageSid,
+            @RequestParam(name = "MessageStatus") String status,
+            @RequestParam MultiValueMap<String, String> params,
+            @RequestHeader(value = "X-Twilio-Signature", required = false) String signature,
+            HttpServletRequest request) {
+        if (!valid(request, params, signature)) return forbidden();
+        notifications.processStatus(messageSid, status);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body("<Response/>");
+    }
+
+    @PostMapping(value = "/whatsapp/inbound", produces = MediaType.APPLICATION_XML_VALUE)
+    public ResponseEntity<String> whatsappInbound(@RequestParam MultiValueMap<String, String> params,
+            @RequestHeader(value = "X-Twilio-Signature", required = false) String signature,
+            HttpServletRequest request) {
+        if (!valid(request, params, signature)) return forbidden();
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_XML).body("<Response/>");
     }
 

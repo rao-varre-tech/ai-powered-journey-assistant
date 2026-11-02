@@ -17,5 +17,6 @@ public record CreateJourneyRequest(
         @NotNull @DecimalMin("-180.0") @DecimalMax("180.0")
         Double destinationLongitude,
         @NotNull @Positive @Max(100_000)
-        Integer geofenceRadiusMeters) {
+        Integer geofenceRadiusMeters,
+        Boolean notificationConsent) {
 }

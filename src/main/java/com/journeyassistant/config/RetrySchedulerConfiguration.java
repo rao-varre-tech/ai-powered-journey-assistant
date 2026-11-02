@@ -4,6 +4,7 @@ import com.journeyassistant.notification.IvrCallService;
 import com.journeyassistant.notification.LocalRetryScheduler;
 import com.journeyassistant.notification.RetryScheduler;
 import com.journeyassistant.notification.CloudTasksRetryScheduler;
+import org.springframework.beans.factory.ObjectProvider;
 import com.google.cloud.tasks.v2.CloudTasksClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -31,8 +32,9 @@ public class RetrySchedulerConfiguration {
 
     @Bean
     @Profile("local")
-    RetryScheduler localRetryScheduler(TaskScheduler taskScheduler, IvrCallService calls) {
-        return new LocalRetryScheduler(taskScheduler, calls);
+    RetryScheduler localRetryScheduler(TaskScheduler taskScheduler, IvrCallService calls,
+                                       ObjectProvider<com.journeyassistant.notification.NotificationService> notifications) {
+        return new LocalRetryScheduler(taskScheduler, calls, notifications);
     }
 
     @Bean

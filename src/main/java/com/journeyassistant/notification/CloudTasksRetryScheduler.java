@@ -33,12 +33,23 @@ public class CloudTasksRetryScheduler implements RetryScheduler {
 
     @Override
     public void scheduleRetry(UUID journeyId, int retryNumber, Duration delay) {
+        schedule(journeyId, delay, "journey-" + journeyId + "-retry-" + retryNumber,
+                "/internal/tasks/journeys/" + journeyId + "/retry");
+    }
+
+    @Override
+    public void scheduleMessageFallback(UUID journeyId, Duration delay) {
+        schedule(journeyId, delay, "journey-" + journeyId + "-whatsapp-fallback",
+                "/internal/tasks/journeys/" + journeyId + "/message-fallback");
+    }
+
+    private void schedule(UUID journeyId, Duration delay, String taskId, String path) {
         Instant scheduledAt = Instant.now().plus(delay);
-        String taskName = TaskName.of(projectId, location, queue, "journey-" + journeyId + "-retry-" + retryNumber).toString();
+        String taskName = TaskName.of(projectId, location, queue, taskId).toString();
         String audience = publicBaseUrl;
         HttpRequest request = HttpRequest.newBuilder()
                 .setHttpMethod(HttpMethod.POST)
-                .setUrl(publicBaseUrl + "/internal/tasks/journeys/" + journeyId + "/retry")
+                .setUrl(publicBaseUrl + path)
                 .setOidcToken(OidcToken.newBuilder().setServiceAccountEmail(invokerServiceAccount).setAudience(audience).build())
                 .build();
         Task task = Task.newBuilder().setName(taskName).setHttpRequest(request)

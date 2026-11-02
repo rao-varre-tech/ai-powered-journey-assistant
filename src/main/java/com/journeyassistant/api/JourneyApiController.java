@@ -27,7 +27,7 @@ public class JourneyApiController {
     @PostMapping
     public ResponseEntity<CreateJourneyResponse> createJourney(@Valid @RequestBody CreateJourneyRequest request) {
         Journey journey = journeyService.createJourney(request.userPhone(), request.destinationLatitude(),
-                request.destinationLongitude(), request.geofenceRadiusMeters());
+                request.destinationLongitude(), request.geofenceRadiusMeters(), Boolean.TRUE.equals(request.notificationConsent()));
         return ResponseEntity.created(URI.create("/api/v1/journeys/" + journey.getId()))
                 .body(CreateJourneyResponse.from(journey));
     }
