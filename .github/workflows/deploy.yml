@@ -1,0 +1,122 @@
+name: Test, build, and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Verify application
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Run Maven verification
+        run: mvn --batch-mode --no-transfer-progress verify
+
+  deploy:
+    name: Build and deploy Cloud Run service
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      SERVICE_NAME: ${{ vars.CLOUD_RUN_SERVICE }}
+      ARTIFACT_REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
+      RUNTIME_SERVICE_ACCOUNT: ${{ vars.CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT }}
+      CLOUD_SQL_INSTANCE: ${{ vars.CLOUD_SQL_INSTANCE }}
+      DATABASE_NAME: ${{ vars.DATABASE_NAME }}
+      DATABASE_USERNAME: ${{ vars.DATABASE_USERNAME }}
+      TASKS_LOCATION: ${{ vars.CLOUD_TASKS_LOCATION }}
+      TASKS_QUEUE: ${{ vars.CLOUD_TASKS_QUEUE }}
+      TASKS_INVOKER_SERVICE_ACCOUNT: ${{ vars.CLOUD_TASKS_INVOKER_SERVICE_ACCOUNT }}
+      DB_PASSWORD_SECRET_VERSION: ${{ vars.DB_PASSWORD_SECRET_VERSION || '1' }}
+      TWILIO_SID_SECRET_VERSION: ${{ vars.TWILIO_SID_SECRET_VERSION || '1' }}
+      TWILIO_TOKEN_SECRET_VERSION: ${{ vars.TWILIO_TOKEN_SECRET_VERSION || '1' }}
+      IVR_PROVIDER: ${{ vars.IVR_PROVIDER || 'fake' }}
+      NOTIFICATION_PROVIDER: ${{ vars.NOTIFICATION_PROVIDER || 'fake' }}
+      NOTIFICATION_STRATEGY: ${{ vars.NOTIFICATION_STRATEGY || 'sms' }}
+      RIDE_LINK: ${{ vars.RIDE_LINK }}
+      IVR_MAX_RETRIES: ${{ vars.IVR_MAX_RETRIES || '3' }}
+      WHATSAPP_FALLBACK_TIMEOUT: ${{ vars.WHATSAPP_FALLBACK_TIMEOUT || '60s' }}
+      TWILIO_FROM_NUMBER: ${{ vars.TWILIO_FROM_NUMBER }}
+      TWILIO_SMS_FROM: ${{ vars.TWILIO_SMS_FROM }}
+      TWILIO_WHATSAPP_FROM: ${{ vars.TWILIO_WHATSAPP_FROM }}
+      TWILIO_WHATSAPP_CONTENT_SID: ${{ vars.TWILIO_WHATSAPP_CONTENT_SID }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: auth
+        name: Authenticate to Google Cloud with Workload Identity Federation
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Artifact Registry Docker authentication
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build and push image
+        run: |
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/journey-assistant:${GITHUB_SHA}"
+          docker build --tag "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Deploy to Cloud Run
+        run: |
+          set -euo pipefail
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/journey-assistant:${GITHUB_SHA}"
+          DATABASE_URL="jdbc:postgresql:///${DATABASE_NAME}?cloudSqlInstance=${CLOUD_SQL_INSTANCE}&socketFactory=com.google.cloud.sql.postgres.SocketFactory&cloudSqlRefreshStrategy=lazy"
+          SECRET_BINDINGS="DATABASE_PASSWORD=journey-db-password:${DB_PASSWORD_SECRET_VERSION},TWILIO_ACCOUNT_SID=twilio-account-sid:${TWILIO_SID_SECRET_VERSION},TWILIO_AUTH_TOKEN=twilio-auth-token:${TWILIO_TOKEN_SECRET_VERSION}"
+
+          if ! gcloud run services describe "$SERVICE_NAME" --region="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
+            echo "Creating the initial service revision with local scheduling; it will be switched to Cloud Tasks below."
+            gcloud run deploy "$SERVICE_NAME" \
+              --image="$IMAGE" \
+              --region="$REGION" \
+              --project="$PROJECT_ID" \
+              --platform=managed \
+              --port=8080 \
+              --service-account="$RUNTIME_SERVICE_ACCOUNT" \
+              --add-cloudsql-instances="$CLOUD_SQL_INSTANCE" \
+              --allow-unauthenticated \
+              --set-env-vars="^|^SPRING_PROFILES_ACTIVE=local|DATABASE_URL=${DATABASE_URL}|DATABASE_USERNAME=${DATABASE_USERNAME}|IVR_PROVIDER=fake|NOTIFICATION_PROVIDER=fake" \
+              --set-secrets="$SECRET_BINDINGS"
+          fi
+
+          PUBLIC_BASE_URL="$(gcloud run services describe "$SERVICE_NAME" --region="$REGION" --project="$PROJECT_ID" --format='value(status.url)')"
+          if [[ -z "$PUBLIC_BASE_URL" ]]; then
+            echo "Cloud Run did not return a service URL" >&2
+            exit 1
+          fi
+
+          ENVIRONMENT="^|^SPRING_PROFILES_ACTIVE=gcp|DATABASE_URL=${DATABASE_URL}|DATABASE_USERNAME=${DATABASE_USERNAME}|GCP_PROJECT_ID=${PROJECT_ID}|GCP_TASKS_LOCATION=${TASKS_LOCATION}|GCP_TASKS_QUEUE=${TASKS_QUEUE}|GCP_TASKS_INVOKER_SERVICE_ACCOUNT=${TASKS_INVOKER_SERVICE_ACCOUNT}|PUBLIC_BASE_URL=${PUBLIC_BASE_URL}|IVR_PROVIDER=${IVR_PROVIDER}|IVR_MAX_RETRIES=${IVR_MAX_RETRIES}|IVR_SIGNATURE_VALIDATION_ENABLED=true|NOTIFICATION_PROVIDER=${NOTIFICATION_PROVIDER}|NOTIFICATION_STRATEGY=${NOTIFICATION_STRATEGY}|WHATSAPP_FALLBACK_TIMEOUT=${WHATSAPP_FALLBACK_TIMEOUT}|RIDE_LINK=${RIDE_LINK}|TWILIO_FROM_NUMBER=${TWILIO_FROM_NUMBER}|TWILIO_SMS_FROM=${TWILIO_SMS_FROM}|TWILIO_WHATSAPP_FROM=${TWILIO_WHATSAPP_FROM}|TWILIO_WHATSAPP_CONTENT_SID=${TWILIO_WHATSAPP_CONTENT_SID}"
+          gcloud run deploy "$SERVICE_NAME" \
+            --image="$IMAGE" \
+            --region="$REGION" \
+            --project="$PROJECT_ID" \
+            --platform=managed \
+            --port=8080 \
+            --service-account="$RUNTIME_SERVICE_ACCOUNT" \
+            --add-cloudsql-instances="$CLOUD_SQL_INSTANCE" \
+            --allow-unauthenticated \
+            --set-env-vars="$ENVIRONMENT" \
+            --set-secrets="$SECRET_BINDINGS" \
+            --quiet
