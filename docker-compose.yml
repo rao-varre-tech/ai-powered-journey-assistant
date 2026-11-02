@@ -4,9 +4,9 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-journey_assistant}
       POSTGRES_USER: ${POSTGRES_USER:-journey}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-${POSTGRES_PORT}}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

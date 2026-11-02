@@ -56,9 +56,11 @@ The retry limit defaults to three retries after the first call. Scheduled work r
 
 ## Run locally
 
-Start PostgreSQL from the repository root:
+Copy the local environment template, set a private database password, then start PostgreSQL from the repository root. Docker Compose reads `.env` automatically, and Spring imports the same file when you run the app from the repository root. Shell environment variables take precedence over values in `.env`.
 
 ```bash
+cp .env.example .env
+# Edit .env and set a private POSTGRES_PASSWORD before starting the database.
 docker compose up -d postgres
 ```
 
@@ -80,7 +82,7 @@ Stop the database when finished:
 docker compose down
 ```
 
-Compose stores PostgreSQL data in a named volume. Set `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, or `POSTGRES_PORT` to override its local defaults. The application connection can be set with `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD`.
+Compose stores PostgreSQL data in a named volume. Set `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, or `POSTGRES_PORT` in `.env` to configure the local database. The application connection can be overridden with `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD`. The populated `.env` file is ignored by Git; do not commit it.
 
 ### Configuration
 

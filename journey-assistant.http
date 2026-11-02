@@ -1,0 +1,77 @@
+@baseUrl = http://localhost:8080
+@journeyId = {{createJourney.response.body.$.journeyId}}
+
+### Create a journey (consent is required for outbound calls/messages)
+# @name createJourney
+POST {{baseUrl}}/api/v1/journeys
+Content-Type: application/json
+
+{
+  "userPhone": "+917306079944",
+  "destinationLatitude": 37.7749,
+  "destinationLongitude": -122.4194,
+  "geofenceRadiusMeters": 250,
+  "notificationConsent": true
+}
+
+### Record a location update near the destination
+POST {{baseUrl}}/api/v1/journeys/{{journeyId}}/locations
+Content-Type: application/json
+
+{
+  "latitude": 37.7750,
+  "longitude": -122.4195,
+  "timestamp": "2026-11-02T11:15:00Z"
+}
+
+### Get journey status
+GET {{baseUrl}}/api/v1/journeys/{{journeyId}}
+Accept: application/json
+
+### Twilio voice webhook (signature is disabled by default with fake providers)
+POST {{baseUrl}}/webhooks/twilio/voice?journeyId={{journeyId}}
+Content-Type: application/x-www-form-urlencoded
+
+### Twilio Gather webhook: digit 1 accepts
+POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{journeyId}}
+Content-Type: application/x-www-form-urlencoded
+
+Digits=1&CallSid=CA124
+
+### Twilio Gather webhook: digit 2 schedules a retry
+POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{journeyId}}
+Content-Type: application/x-www-form-urlencoded
+
+Digits=2&CallSid=CA00000000000000000000000000000002
+
+### Twilio Gather webhook: digit 3 declines
+POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{journeyId}}
+Content-Type: application/x-www-form-urlencoded
+
+Digits=3&CallSid=CA00000000000000000000000000000003
+
+### Twilio call status callback
+# Use a CallSid assigned to an existing notification attempt.
+POST {{baseUrl}}/webhooks/twilio/status
+Content-Type: application/x-www-form-urlencoded
+
+CallSid=CA00000000000000000000000000000001&CallStatus=completed
+
+### Twilio message status callback
+# Use a MessageSid assigned to an existing journey message.
+POST {{baseUrl}}/webhooks/twilio/message-status
+Content-Type: application/x-www-form-urlencoded
+
+MessageSid=SM00000000000000000000000000000001&MessageStatus=delivered
+
+### Twilio WhatsApp inbound webhook
+POST {{baseUrl}}/webhooks/twilio/whatsapp/inbound
+Content-Type: application/x-www-form-urlencoded
+
+From=whatsapp%3A%2B14155550123&To=whatsapp%3A%2B14155550100&Body=Hello
+
+### Run a scheduled retry task manually (internal endpoint)
+POST {{baseUrl}}/internal/tasks/journeys/{{journeyId}}/retry
+
+### Run a message fallback task manually (internal endpoint)
+POST {{baseUrl}}/internal/tasks/journeys/{{journeyId}}/message-fallback

@@ -1,12 +1,14 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: journey-assistant
   profiles:
     default: local
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/journey_assistant}
-    username: ${DATABASE_USERNAME:journey}
-    password: ${DATABASE_PASSWORD:${POSTGRES_PASSWORD}}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:journey_assistant}}
+    username: ${DATABASE_USERNAME:${POSTGRES_USER:journey}}
+    password: ${DATABASE_PASSWORD:${POSTGRES_PASSWORD:}}
   jpa:
     hibernate:
       ddl-auto: validate
