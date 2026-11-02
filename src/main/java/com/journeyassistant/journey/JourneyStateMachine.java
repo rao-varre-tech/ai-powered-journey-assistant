@@ -10,7 +10,7 @@ public final class JourneyStateMachine {
             new Transition(JourneyState.ARRIVED, JourneyEvent.CALL_STARTED), JourneyState.CALLING,
             new Transition(JourneyState.CALLING, JourneyEvent.ACCEPT), JourneyState.ACCEPTED,
             new Transition(JourneyState.CALLING, JourneyEvent.RETRY), JourneyState.RETRY_SCHEDULED,
-            new Transition(JourneyState.CALLING, JourneyEvent.REJECT), JourneyState.REJECTED,
+            new Transition(JourneyState.CALLING, JourneyEvent.REJECT), JourneyState.DECLINED,
             new Transition(JourneyState.RETRY_SCHEDULED, JourneyEvent.RETRY_DUE), JourneyState.CALLING
     );
 

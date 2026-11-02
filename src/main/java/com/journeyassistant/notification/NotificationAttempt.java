@@ -47,6 +47,12 @@ public class NotificationAttempt {
     @Column(name = "completed_at")
     private Instant completedAt;
 
+    @Column(name = "last_processed_digit", length = 1)
+    private String lastProcessedDigit;
+
+    @Column(name = "invalid_digit_count", nullable = false)
+    private int invalidDigitCount;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -99,5 +105,30 @@ public class NotificationAttempt {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public String getLastProcessedDigit() { return lastProcessedDigit; }
+
+    public int getInvalidDigitCount() { return invalidDigitCount; }
+
+    public void assignProviderCallId(String callSid) {
+        if (providerCallId != null && !providerCallId.equals(callSid)) {
+            throw new IllegalStateException("Call SID is already assigned");
+        }
+        providerCallId = callSid;
+        status = NotificationAttemptStatus.IN_PROGRESS;
+        startedAt = Instant.now();
+    }
+
+    public void updateStatus(NotificationAttemptStatus status) {
+        this.status = status;
+        if (status == NotificationAttemptStatus.COMPLETED || status == NotificationAttemptStatus.FAILED) {
+            completedAt = Instant.now();
+        }
+    }
+
+    public void recordDigit(String digit) {
+        lastProcessedDigit = digit;
+        if (!"1".equals(digit) && !"2".equals(digit) && !"3".equals(digit)) invalidDigitCount++;
     }
 }

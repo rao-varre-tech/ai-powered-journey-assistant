@@ -6,5 +6,6 @@ public enum JourneyState {
     CALLING,
     RETRY_SCHEDULED,
     ACCEPTED,
+    DECLINED,
     REJECTED
 }

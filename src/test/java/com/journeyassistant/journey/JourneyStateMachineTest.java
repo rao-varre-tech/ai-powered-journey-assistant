@@ -21,7 +21,7 @@ class JourneyStateMachineTest {
                 new TransitionCase(JourneyState.ARRIVED, JourneyEvent.CALL_STARTED), JourneyState.CALLING,
                 new TransitionCase(JourneyState.CALLING, JourneyEvent.ACCEPT), JourneyState.ACCEPTED,
                 new TransitionCase(JourneyState.CALLING, JourneyEvent.RETRY), JourneyState.RETRY_SCHEDULED,
-                new TransitionCase(JourneyState.CALLING, JourneyEvent.REJECT), JourneyState.REJECTED,
+                new TransitionCase(JourneyState.CALLING, JourneyEvent.REJECT), JourneyState.DECLINED,
                 new TransitionCase(JourneyState.RETRY_SCHEDULED, JourneyEvent.RETRY_DUE), JourneyState.CALLING
         );
 
@@ -63,7 +63,7 @@ class JourneyStateMachineTest {
                     || event == JourneyEvent.RETRY
                     || event == JourneyEvent.REJECT;
             case RETRY_SCHEDULED -> event == JourneyEvent.RETRY_DUE;
-            case ACCEPTED, REJECTED -> false;
+            case ACCEPTED, DECLINED, REJECTED -> false;
         };
     }
 
