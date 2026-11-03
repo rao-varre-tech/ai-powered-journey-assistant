@@ -117,8 +117,14 @@ public class NotificationService {
         JourneyMessage record = messages.saveAndFlush(new JourneyMessage(journey, type));
         try {
             String sid = channel.send(journey.getTravellerPhone(), body, templateVariables);
-            if (sid == null || sid.isBlank()) record.updateStatus(MessageDeliveryStatus.FAILED);
-            else record.assignProviderMessageId(sid);
+            if (sid == null || sid.isBlank()) {
+                record.updateStatus(MessageDeliveryStatus.FAILED);
+                log.warn("{} message submission returned no provider id for journey {}", type, journey.getId());
+            } else {
+                record.assignProviderMessageId(sid);
+                String idLabel = type == MessageChannelType.WHATSAPP ? "WhatsApp MessageSid" : "SMS MessageSid";
+                log.info("{} for journey {}: {}", idLabel, journey.getId(), sid);
+            }
         } catch (RuntimeException exception) {
             record.updateStatus(MessageDeliveryStatus.FAILED);
             log.warn("{} notification submission failed for journey {}", type, journey.getId());

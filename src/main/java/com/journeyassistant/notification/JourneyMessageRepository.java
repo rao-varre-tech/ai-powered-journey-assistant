@@ -6,9 +6,12 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 public interface JourneyMessageRepository extends JpaRepository<JourneyMessage, UUID> {
+    List<JourneyMessage> findAllByJourney_Id(UUID journeyId);
+
     @Query("select message from JourneyMessage message where message.providerMessageId = :messageSid")
     Optional<JourneyMessage> findByProviderMessageId(@Param("messageSid") String messageSid);
 

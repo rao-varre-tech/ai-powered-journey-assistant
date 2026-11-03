@@ -76,6 +76,8 @@ The API listens on `http://localhost:8080`. To run the test suite and package ve
 mvn clean verify
 ```
 
+Interactive API documentation is available at [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html); the OpenAPI JSON is at `/v3/api-docs`. Use **GET `/api/v1/journeys/{journeyId}/provider-references`** in Swagger UI after triggering a call or message to fetch the latest call SID and available message SIDs. Swagger displays the IDs in the response; it does not automatically insert response values into a different operation's form.
+
 Stop the database when finished:
 
 ```bash
@@ -100,6 +102,7 @@ Common environment variables:
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | Twilio credentials; keep out of source control. |
 | `TWILIO_FROM_NUMBER`, `TWILIO_SMS_FROM`, `TWILIO_WHATSAPP_FROM` | Voice, SMS, and WhatsApp senders as applicable. |
 | `TWILIO_WHATSAPP_CONTENT_SID` | Optional approved WhatsApp template content SID. |
+| `SWAGGER_ENABLED` | Enables Swagger UI and OpenAPI docs; defaults to `true` for local development. Set to `false` in production if the docs should be hidden. |
 | `PUBLIC_BASE_URL` | Public application origin used for Twilio callbacks and signature validation. |
 
 For Cloud Tasks, activate the `gcp` profile and configure `GCP_PROJECT_ID`, `GCP_TASKS_LOCATION`, `GCP_TASKS_QUEUE`, `GCP_TASKS_INVOKER_SERVICE_ACCOUNT`, and `PUBLIC_BASE_URL`. See the [deployment guide](docs/deploy.md). For Twilio trial setup, WhatsApp sandbox, and manual checks, see [Twilio setup](docs/twilio-setup.md).
@@ -134,9 +137,13 @@ curl -i -X POST "http://localhost:8080/api/v1/journeys/${JOURNEY_ID}/locations" 
   }'
 
 curl -i "http://localhost:8080/api/v1/journeys/${JOURNEY_ID}"
+
+# Fetch call/message provider IDs for webhook testing
+curl -i "http://localhost:8080/api/v1/journeys/${JOURNEY_ID}/provider-references"
 ```
 
 The location response contains `distanceToDestinationMeters`, the new `state`, and `arrivedNow`. If the update falls within the radius, the journey transitions from `TRACKING` to `ARRIVED`; with consent enabled, arrival handling can initiate the IVR flow.
+The provider-references endpoint returns the latest call SID and any SMS/WhatsApp message SIDs recorded for the journey. The REST Client file uses this response to populate its webhook request variables.
 
 ## Twilio webhooks
 

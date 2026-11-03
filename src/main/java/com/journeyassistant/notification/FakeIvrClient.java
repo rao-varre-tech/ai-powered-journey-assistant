@@ -10,7 +10,8 @@ public class FakeIvrClient implements IvrClient {
     @Override
     public String placeCall(UUID journeyId, String toPhone) {
         String callSid = "FAKE-" + UUID.randomUUID();
-        log.info("Fake IVR call queued for journey {} to phone {}", journeyId, maskPhone(toPhone));
+        log.info("Fake IVR call queued for journey {} with call id {} to phone {}",
+                journeyId, callSid, maskPhone(toPhone));
         return callSid;
     }
 

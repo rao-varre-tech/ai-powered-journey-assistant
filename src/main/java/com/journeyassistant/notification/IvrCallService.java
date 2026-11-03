@@ -7,6 +7,7 @@ import com.journeyassistant.journey.JourneyState;
 import com.journeyassistant.journey.JourneyStateMachine;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
@@ -25,7 +26,9 @@ public class IvrCallService {
         this.maxRetries = maxRetries;
     }
 
-    @Transactional
+    // Arrival calls are launched by an AFTER_COMMIT listener. Use a fresh
+    // transaction so the pessimistic journey lock is backed by an active tx.
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public String placeCall(UUID journeyId) {
         Journey journey = journeys.findByIdForUpdate(journeyId).orElseThrow();
         if (!journey.hasNotificationConsent() || journey.getState() != JourneyState.ARRIVED) return null;

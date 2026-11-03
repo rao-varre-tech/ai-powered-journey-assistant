@@ -1,7 +1,12 @@
 @baseUrl = http://localhost:8080
 @journeyId = {{createJourney.response.body.$.journeyId}}
+@callSid = {{getProviderReferences.response.body.$.latestCallSid}}
+@messageSid = {{getProviderReferences.response.body.$.smsMessageSid}}
+@whatsappMessageSid = {{getProviderReferences.response.body.$.whatsappMessageSid}}
 
 ### Create a journey (consent is required for outbound calls/messages)
+# Configure a non-empty RIDE_LINK in .env and restart the app before testing
+# the message flow. The local fake provider does not send a real message.
 # @name createJourney
 POST {{baseUrl}}/api/v1/journeys
 Content-Type: application/json
@@ -21,11 +26,18 @@ Content-Type: application/json
 {
   "latitude": 37.7750,
   "longitude": -122.4195,
-  "timestamp": "2026-11-02T11:15:00Z"
+  "timestamp": "{{$datetime iso8601}}"
 }
 
 ### Get journey status
 GET {{baseUrl}}/api/v1/journeys/{{journeyId}}
+Accept: application/json
+
+### Get the latest call and message IDs for this journey
+# Run after the in-geofence location update to fetch CallSid. Run again after
+# the digit-1 Gather request to fetch the new SMS or WhatsApp MessageSid.
+# @name getProviderReferences
+GET {{baseUrl}}/api/v1/journeys/{{journeyId}}/provider-references
 Accept: application/json
 
 ### Twilio voice webhook (signature is disabled by default with fake providers)
@@ -33,36 +45,47 @@ POST {{baseUrl}}/webhooks/twilio/voice?journeyId={{journeyId}}
 Content-Type: application/x-www-form-urlencoded
 
 ### Twilio Gather webhook: digit 1 accepts
+# First create a journey, submit an in-geofence location update, then run
+# "Get the latest call and message IDs" above.
 POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{journeyId}}
 Content-Type: application/x-www-form-urlencoded
 
-Digits=1&CallSid=CA124
+Digits=1&CallSid={{callSid}}
 
 ### Twilio Gather webhook: digit 2 schedules a retry
+# Run "Get the latest call and message IDs" after the new retry call is placed.
 POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{journeyId}}
 Content-Type: application/x-www-form-urlencoded
 
-Digits=2&CallSid=CA00000000000000000000000000000002
+Digits=2&CallSid={{callSid}}
 
 ### Twilio Gather webhook: digit 3 declines
+# Run "Get the latest call and message IDs" after the new call is placed.
 POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{journeyId}}
 Content-Type: application/x-www-form-urlencoded
 
-Digits=3&CallSid=CA00000000000000000000000000000003
+Digits=3&CallSid={{callSid}}
 
 ### Twilio call status callback
 # Use a CallSid assigned to an existing notification attempt.
 POST {{baseUrl}}/webhooks/twilio/status
 Content-Type: application/x-www-form-urlencoded
 
-CallSid=CA00000000000000000000000000000001&CallStatus=completed
+CallSid={{callSid}}&CallStatus=completed
 
 ### Twilio message status callback
 # Use a MessageSid assigned to an existing journey message.
 POST {{baseUrl}}/webhooks/twilio/message-status
 Content-Type: application/x-www-form-urlencoded
 
-MessageSid=SM00000000000000000000000000000001&MessageStatus=delivered
+MessageSid={{messageSid}}&MessageStatus=delivered
+
+### Twilio WhatsApp message status callback
+# Use when a WhatsApp message was sent; refresh provider references first.
+POST {{baseUrl}}/webhooks/twilio/message-status
+Content-Type: application/x-www-form-urlencoded
+
+MessageSid={{whatsappMessageSid}}&MessageStatus=delivered
 
 ### Twilio WhatsApp inbound webhook
 POST {{baseUrl}}/webhooks/twilio/whatsapp/inbound

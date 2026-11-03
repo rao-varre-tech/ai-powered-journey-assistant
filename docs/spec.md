@@ -36,6 +36,7 @@ All other transitions are invalid. `REJECTED` remains in the enum for compatibil
 | `POST /api/v1/journeys` | Create a journey from `userPhone`, `destinationLatitude`, `destinationLongitude`, `geofenceRadiusMeters`, and optional `notificationConsent` (defaults false). |
 | `POST /api/v1/journeys/{journeyId}/locations` | Record `latitude`, `longitude`, and `timestamp`; compute haversine distance and transition to arrival when within the radius. |
 | `GET /api/v1/journeys/{journeyId}` | Return journey status. |
+| `GET /api/v1/journeys/{journeyId}/provider-references` | Return the latest call SID and available SMS/WhatsApp message SIDs for REST-client testing and provider diagnostics. |
 | `POST /webhooks/twilio/voice?journeyId={id}` | Return IVR TwiML with a one-digit Gather prompt; no input results in goodbye and hangup. |
 | `POST /webhooks/twilio/gather?journeyId={id}` | Process form fields `Digits` and `CallSid`: 1 accepts, 2 schedules retry, 3 declines. Invalid input may be repeated once, then the call ends. |
 | `POST /webhooks/twilio/status` | Update call attempt status; no-answer, busy, or failed schedules a retry unless the retry limit is exhausted. |
@@ -57,6 +58,8 @@ Validation errors return 400, missing journeys 404, and invalid state transition
 
 ## Configuration and operations
 Configuration is in `src/main/resources/application.yml` and is environment driven. Main variables include `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `IVR_PROVIDER`, `IVR_MAX_RETRIES`, `IVR_SIGNATURE_VALIDATION_ENABLED`, `NOTIFICATION_PROVIDER`, `NOTIFICATION_STRATEGY`, `WHATSAPP_FALLBACK_TIMEOUT`, `RIDE_LINK`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `TWILIO_SMS_FROM`, `TWILIO_WHATSAPP_FROM`, `TWILIO_WHATSAPP_CONTENT_SID`, `PUBLIC_BASE_URL`, and `GCP_TASKS_*` / `GCP_PROJECT_ID`.
+
+Swagger UI is served at `/swagger-ui.html` and OpenAPI JSON at `/v3/api-docs`; set `SWAGGER_ENABLED=false` to disable both. The provider-references endpoint fetches persisted IDs and displays them in Swagger responses; Swagger UI does not automatically pass those values into a separate webhook request.
 
 See [Twilio setup](./twilio-setup.md) for provider setup and [deployment guide](./deploy.md) for Cloud Run, Cloud SQL, Secret Manager, and Cloud Tasks configuration.
 
