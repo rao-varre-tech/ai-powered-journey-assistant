@@ -22,7 +22,7 @@ import java.net.URI;
 @Configuration
 public class IvrConfiguration {
     @Bean
-    @ConditionalOnProperty(prefix = "ivr", name = "provider", havingValue = "fake", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = "ivr", name = "provider", havingValue = "fake")
     IvrClient fakeIvrClient() { return new FakeIvrClient(); }
 
     @Bean
@@ -30,10 +30,11 @@ public class IvrConfiguration {
     IvrClient twilioIvrClient(TwilioCallCreatorFactory creatorFactory,
             com.twilio.http.TwilioRestClient restClient,
             @Value("${twilio.from-number}") String fromNumber,
-            @Value("${twilio.public-base-url}") String publicBaseUrl) {
+            @Value("${twilio.public-base-url}") String publicBaseUrl,
+            @Value("${twilio.trial-mode:false}") boolean trialMode) {
         if (fromNumber.isBlank() || publicBaseUrl.isBlank())
             throw new IllegalStateException("Twilio configuration is incomplete");
-        return new TwilioIvrClient(creatorFactory, restClient, fromNumber, URI.create(publicBaseUrl));
+        return new TwilioIvrClient(creatorFactory, restClient, fromNumber, URI.create(publicBaseUrl), trialMode);
     }
 
     @Bean
@@ -58,10 +59,11 @@ public class IvrConfiguration {
     @Bean("smsChannel")
     @ConditionalOnProperty(prefix = "notification", name = "provider", havingValue = "twilio")
     MessageChannel twilioSmsChannel(TwilioMessageCreatorFactory factory, com.twilio.http.TwilioRestClient restClient,
-            @Value("${twilio.sms-from:}") String fromNumber, @Value("${twilio.public-base-url:}") String publicBaseUrl) {
+            @Value("${twilio.sms-from:}") String fromNumber, @Value("${twilio.public-base-url:}") String publicBaseUrl,
+            @Value("${twilio.trial-mode:false}") boolean trialMode) {
         requireMessageConfig(fromNumber, publicBaseUrl, "TWILIO_SMS_FROM");
         return new TwilioSmsChannel(factory, restClient, fromNumber,
-                URI.create(publicBaseUrl.replaceAll("/$", "") + "/webhooks/twilio/message-status"));
+                URI.create(publicBaseUrl.replaceAll("/$", "") + "/webhooks/twilio/message-status"), trialMode);
     }
 
     @Bean("whatsappChannel")
@@ -69,10 +71,11 @@ public class IvrConfiguration {
     MessageChannel twilioWhatsAppChannel(TwilioMessageCreatorFactory factory, com.twilio.http.TwilioRestClient restClient,
             @Value("${twilio.whatsapp-from:}") String fromNumber,
             @Value("${twilio.whatsapp-content-sid:}") String contentSid,
-            @Value("${twilio.public-base-url:}") String publicBaseUrl) {
+            @Value("${twilio.public-base-url:}") String publicBaseUrl,
+            @Value("${twilio.trial-mode:false}") boolean trialMode) {
         requireMessageConfig(fromNumber, publicBaseUrl, "TWILIO_WHATSAPP_FROM");
         return new TwilioWhatsAppChannel(factory, restClient, fromNumber, contentSid,
-                URI.create(publicBaseUrl.replaceAll("/$", "") + "/webhooks/twilio/message-status"));
+                URI.create(publicBaseUrl.replaceAll("/$", "") + "/webhooks/twilio/message-status"), trialMode);
     }
 
     @Bean

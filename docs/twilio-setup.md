@@ -19,6 +19,50 @@ ngrok http 8080
 
 Copy the HTTPS forwarding origin (for example `https://example.ngrok-free.app`) and set `PUBLIC_BASE_URL` to that origin with no trailing slash. Twilio needs the public URL to reach the local webhook and to validate request signatures. Also set `IVR_PROVIDER=twilio` and `IVR_SIGNATURE_VALIDATION_ENABLED=true`. For local-only fake calls, leave the defaults `IVR_PROVIDER=fake` and signature validation disabled.
 
+`PUBLIC_BASE_URL` is the public origin of this application, used to construct the Voice webhook and callback URLs that Twilio calls. It is not a Twilio API endpoint. For example, if it is `https://example.ngrok-free.app`, the app gives Twilio `https://example.ngrok-free.app/webhooks/twilio/voice?journeyId=...` as the call's Voice URL.
+
+## Configure outbound Twilio IVR and keypad input
+
+Add these values to the ignored local `.env` file, or configure them in Secret Manager for deployment. Use the E.164 number of a voice-capable Twilio number for `TWILIO_FROM_NUMBER`. A Twilio trial account can call only verified destination numbers.
+
+```dotenv
+IVR_PROVIDER=twilio
+IVR_SIGNATURE_VALIDATION_ENABLED=true
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your-auth-token
+TWILIO_FROM_NUMBER=+15551234567
+PUBLIC_BASE_URL=https://your-ngrok-host.ngrok-free.app
+```
+
+Restart the application after changing `.env`. Keep `IVR_PROVIDER=fake` until the Twilio values and public HTTPS URL are ready; `twilio` causes the application to place real outbound calls after an opted-in journey enters its geofence. The app creates the outbound call with a voice webhook URL at `{PUBLIC_BASE_URL}/webhooks/twilio/voice?journeyId={id}` and status callbacks at `{PUBLIC_BASE_URL}/webhooks/twilio/status`, so no separate Twilio Console voice webhook is needed for these outbound calls.
+
+Set `TWILIO_TRIAL_MODE=true` for a Twilio trial account. Trial mode sends SMS and WhatsApp messages with only `To`, `From`, and `Body`; WhatsApp templates and message status callbacks are omitted. Calls retain the voice URL but omit status callbacks. With `NOTIFICATION_STRATEGY=whatsapp_then_sms`, delivery webhooks are unavailable, so the app warns and uses the configured timer-based fallback; use `both` to send both channels immediately. The default `TWILIO_TRIAL_MODE=false` preserves full callback and template behavior.
+
+When Twilio fetches the voice webhook, it receives TwiML with a `<Gather numDigits="1">` prompt. Twilio POSTs the keypad digit and `CallSid` to `/webhooks/twilio/gather?journeyId={id}`. The application handles the choices as follows:
+
+| Key | Journey action | Caller response |
+|---|---|---|
+| `1` | Set the journey to `ACCEPTED` and send the configured ride-link notification, if consent is true. | Confirms the link will be sent, then hangs up. |
+| `2` | Set the journey to `RETRY_SCHEDULED` and schedule a call in five minutes, subject to the retry limit. | Confirms another call is scheduled, then hangs up. |
+| `3` | Set the journey to `DECLINED`; later location updates do not start another call. | Confirms calls have stopped, then hangs up. |
+| Other key | Keep the journey state unchanged. | Repeat the prompt once; a further invalid entry gets a polite goodbye and hangup. |
+
+To initiate a call, create a journey with `notificationConsent: true`, then submit a location update inside the configured geofence. Use the `journey-assistant.http` requests to inspect status and simulate keypad callbacks while running the fake provider. Real Twilio requests must come from Twilio because signature validation is enabled; do not manually replay unsigned webhook requests against the live Twilio configuration.
+
+## Troubleshoot a 403 or a silent call
+
+When `IVR_SIGNATURE_VALIDATION_ENABLED=true`, every Twilio webhook must include a valid `X-Twilio-Signature`. The application returns HTTP 403 before returning TwiML if the signature is missing or invalid. A rejected `/voice` request means Twilio did not receive the prompt, so the call can connect without speaking; `/gather` is also rejected, so keypad choices cannot be processed. `TWILIO_TRIAL_MODE` does not disable webhook signature validation.
+
+Use this checklist when application logs say a request to `/webhooks/twilio/voice` was rejected:
+
+1. In Twilio Console, open the call's **Request Inspector** and inspect the exact Voice request URL and response. Compare that URL, including scheme, host, path, and `journeyId` query string, with the URL generated for the call. The origin must match `PUBLIC_BASE_URL` exactly.
+2. Make sure the tunnel is running and its current HTTPS origin is still the value in `PUBLIC_BASE_URL`. Free tunnel hostnames can change; update `.env` and restart the application after a change. Calls created before a tunnel URL change still contain the old Voice URL.
+3. Confirm `TWILIO_AUTH_TOKEN` belongs to the same Twilio account or subaccount that created the call. Do not paste the token, signature header, or full request body into logs or support messages.
+4. Confirm the request reaches this app and that its runtime has the intended provider and validation configuration. Restart after changing `.env`; shell environment variables override values loaded from `.env`.
+5. Do not run the `/webhooks/twilio/voice` request in `journey-assistant.http` with Twilio signature validation enabled. A REST Client request does not have Twilio's signature and a 403 is expected. Trigger a real call via an opted-in journey, then let Twilio request `/voice` and `/gather`. For unsigned local simulation, select both fake providers and disable signature validation, then restart.
+
+The `/webhooks/twilio/voice` and `/webhooks/twilio/gather` endpoints are outbound-call webhooks: the app supplies the Voice URL when it creates a call, so a separate Console Voice URL is not required for this flow. For provider-side diagnostics, use the call SID from the provider-references endpoint and the call's Request Inspector in Twilio Console. Never disable signature validation while either Twilio provider is active.
+
 ## WhatsApp sandbox
 
 1. In the Twilio Console, open **Messaging → Try it out → Send a WhatsApp message** (the exact menu label can vary) and activate the sandbox.

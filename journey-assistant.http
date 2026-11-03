@@ -1,8 +1,12 @@
-@baseUrl = http://localhost:8080
+@baseUrl = https://hamster-garage-conch.ngrok-free.dev
 @journeyId = {{createJourney.response.body.$.journeyId}}
 @callSid = {{getProviderReferences.response.body.$.latestCallSid}}
 @messageSid = {{getProviderReferences.response.body.$.smsMessageSid}}
 @whatsappMessageSid = {{getProviderReferences.response.body.$.whatsappMessageSid}}
+@declinedJourneyId = {{createDeclinedJourney.response.body.$.journeyId}}
+@declinedCallSid = {{getDeclinedReferencesBefore.response.body.$.latestCallSid}}
+@invalidJourneyId = {{createInvalidDigitJourney.response.body.$.journeyId}}
+@invalidCallSid = {{getInvalidDigitReferences.response.body.$.latestCallSid}}
 
 ### Create a journey (consent is required for outbound calls/messages)
 # Configure a non-empty RIDE_LINK in .env and restart the app before testing
@@ -40,7 +44,15 @@ Accept: application/json
 GET {{baseUrl}}/api/v1/journeys/{{journeyId}}/provider-references
 Accept: application/json
 
-### Twilio voice webhook (signature is disabled by default with fake providers)
+### Twilio voice webhook (Twilio-signed request only when Twilio mode is enabled)
+# Do not run this request directly while IVR_PROVIDER=twilio and
+# IVR_SIGNATURE_VALIDATION_ENABLED=true: the REST client cannot generate
+# Twilio's X-Twilio-Signature, so the app correctly returns 403.
+# In Twilio mode, submit an in-geofence location update above; Twilio calls
+# this endpoint automatically and then POSTs keypad input to /gather.
+# For manual local webhook testing, set IVR_PROVIDER=fake,
+# NOTIFICATION_PROVIDER=fake, and IVR_SIGNATURE_VALIDATION_ENABLED=false,
+# then restart the app. Signature validation may only be disabled for fakes.
 POST {{baseUrl}}/webhooks/twilio/voice?journeyId={{journeyId}}
 Content-Type: application/x-www-form-urlencoded
 
@@ -52,19 +64,104 @@ Content-Type: application/x-www-form-urlencoded
 
 Digits=1&CallSid={{callSid}}
 
+### Duplicate delivery: resend the exact same digit-1 request
+# Send the digit-1 request above first, then send this unchanged request.
+# The journey should remain ACCEPTED and no second SMS/WhatsApp message should be created.
+POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{journeyId}}
+Content-Type: application/x-www-form-urlencoded
+
+Digits=1&CallSid={{callSid}}
+
 ### Twilio Gather webhook: digit 2 schedules a retry
-# Run "Get the latest call and message IDs" after the new retry call is placed.
+# Alternative choice for a fresh journey in CALLING state; do not run after digit 1 or 3.
 POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{journeyId}}
 Content-Type: application/x-www-form-urlencoded
 
 Digits=2&CallSid={{callSid}}
 
+### Create a separate journey for the digit-3 scenario
+# @name createDeclinedJourney
+POST {{baseUrl}}/api/v1/journeys
+Content-Type: application/json
+
+{
+  "userPhone": "+919999999999",
+  "destinationLatitude": 37.7749,
+  "destinationLongitude": -122.4194,
+  "geofenceRadiusMeters": 250,
+  "notificationConsent": true
+}
+
+### Bring the decline-scenario journey into the geofence
+POST {{baseUrl}}/api/v1/journeys/{{declinedJourneyId}}/locations
+Content-Type: application/json
+
+{
+  "latitude": 37.7750,
+  "longitude": -122.4195,
+  "timestamp": "{{$datetime iso8601}}"
+}
+
+### Fetch the decline-scenario CallSid
+# @name getDeclinedReferencesBefore
+GET {{baseUrl}}/api/v1/journeys/{{declinedJourneyId}}/provider-references
+Accept: application/json
+
 ### Twilio Gather webhook: digit 3 declines
-# Run "Get the latest call and message IDs" after the new call is placed.
-POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{journeyId}}
+POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{declinedJourneyId}}
 Content-Type: application/x-www-form-urlencoded
 
-Digits=3&CallSid={{callSid}}
+Digits=3&CallSid={{declinedCallSid}}
+
+### After digit 3, submit another in-geofence location update
+POST {{baseUrl}}/api/v1/journeys/{{declinedJourneyId}}/locations
+Content-Type: application/json
+
+{
+  "latitude": 37.7750,
+  "longitude": -122.4195,
+  "timestamp": "{{$datetime iso8601}}"
+}
+
+### Confirm no new call was placed after decline
+# Compare latestCallSid with getDeclinedReferencesBefore; it should be unchanged.
+# @name getDeclinedReferencesAfter
+GET {{baseUrl}}/api/v1/journeys/{{declinedJourneyId}}/provider-references
+Accept: application/json
+
+### Create a separate journey for the invalid-digit scenario
+# @name createInvalidDigitJourney
+POST {{baseUrl}}/api/v1/journeys
+Content-Type: application/json
+
+{
+  "userPhone": "+919999999999",
+  "destinationLatitude": 37.7749,
+  "destinationLongitude": -122.4194,
+  "geofenceRadiusMeters": 250,
+  "notificationConsent": true
+}
+
+### Bring the invalid-digit journey into the geofence
+POST {{baseUrl}}/api/v1/journeys/{{invalidJourneyId}}/locations
+Content-Type: application/json
+
+{
+  "latitude": 37.7750,
+  "longitude": -122.4195,
+  "timestamp": "{{$datetime iso8601}}"
+}
+
+### Fetch the invalid-digit CallSid
+# @name getInvalidDigitReferences
+GET {{baseUrl}}/api/v1/journeys/{{invalidJourneyId}}/provider-references
+Accept: application/json
+
+### Invalid digit 9 returns a polite retry prompt instead of an error
+POST {{baseUrl}}/webhooks/twilio/gather?journeyId={{invalidJourneyId}}
+Content-Type: application/x-www-form-urlencoded
+
+Digits=9&CallSid={{invalidCallSid}}
 
 ### Twilio call status callback
 # Use a CallSid assigned to an existing notification attempt.

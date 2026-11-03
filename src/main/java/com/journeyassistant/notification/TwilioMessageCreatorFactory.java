@@ -13,14 +13,16 @@ public class TwilioMessageCreatorFactory {
     public TwilioMessageCreatorFactory(ObjectMapper objectMapper) { this.objectMapper = objectMapper; }
 
     public MessageCreator sms(String to, String from, String body, URI statusCallback) {
-        return Message.creator(new PhoneNumber(to), new PhoneNumber(from), body).setStatusCallback(statusCallback);
+        MessageCreator creator = Message.creator(new PhoneNumber(to), new PhoneNumber(from), body);
+        if (statusCallback != null) creator.setStatusCallback(statusCallback);
+        return creator;
     }
 
     public MessageCreator whatsapp(String to, String from, String body, String contentSid,
                                    String contentVariables, URI statusCallback) {
         MessageCreator creator = Message.creator(new PhoneNumber(whatsappAddress(to)),
-                new PhoneNumber(whatsappAddress(from)), contentSid == null || contentSid.isBlank() ? body : null)
-                .setStatusCallback(statusCallback);
+                new PhoneNumber(whatsappAddress(from)), contentSid == null || contentSid.isBlank() ? body : null);
+        if (statusCallback != null) creator.setStatusCallback(statusCallback);
         if (contentSid != null && !contentSid.isBlank()) {
             creator.setContentSid(contentSid);
             creator.setContentVariables(contentVariables);

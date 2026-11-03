@@ -5,6 +5,8 @@ import com.journeyassistant.notification.IvrWebhookService;
 import com.journeyassistant.notification.TwilioWebhookSignatureValidator;
 import com.journeyassistant.notification.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/webhooks/twilio")
 public class TwilioWebhookController {
+    private static final Logger log = LoggerFactory.getLogger(TwilioWebhookController.class);
+
     private final IvrTwimlFactory twiml;
     private final IvrWebhookService webhooks;
     private final TwilioWebhookSignatureValidator signatures;
@@ -84,7 +88,14 @@ public class TwilioWebhookController {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>(params);
         // journeyId is part of the URL query string and is already included in the signed URL.
         form.remove("journeyId");
-        return signatures.isValid(request.getRequestURI(), request.getQueryString(), form, signature);
+        boolean valid = signatures.isValid(request.getRequestURI(), request.getQueryString(), form, signature);
+        if (valid) {
+            log.info("Accepted Twilio webhook request for {}", request.getRequestURI());
+        } else {
+            log.warn("Rejected Twilio webhook request for {} because its signature is missing or invalid",
+                    request.getRequestURI());
+        }
+        return valid;
     }
 
     private ResponseEntity<String> xml(String body) {

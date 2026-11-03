@@ -55,6 +55,14 @@ class NotificationServiceTest {
         verify(f.scheduler).scheduleMessageFallback(journeyId, Duration.ofSeconds(60));
     }
 
+    @Test void trialModeWhatsappThenSmsUsesTimerBasedFallback() {
+        Fixture f = new Fixture("whatsapp_then_sms", true);
+        f.service.sendRideLink(journeyId);
+        verify(f.whatsapp).send(eq("+15550001111"), eq(body()), eq(templateVariables()));
+        verify(f.sms, never()).send(any(), any(), anyMap());
+        verify(f.scheduler).scheduleMessageFallback(journeyId, Duration.ofSeconds(60));
+    }
+
     @ParameterizedTest
     @CsvSource({"failed, FAILED", "undelivered, UNDELIVERED"})
     void failedOrUndeliveredStatusTriggersSmsOnce(String raw, String enumName) {
@@ -120,6 +128,10 @@ class NotificationServiceTest {
         final NotificationService service;
 
         Fixture(String strategy) {
+            this(strategy, false);
+        }
+
+        Fixture(String strategy, boolean trialMode) {
             when(journeys.findByIdForUpdate(journeyId)).thenReturn(Optional.of(journey));
             when(repository.findByJourneyAndChannelForUpdate(any(), any())).thenAnswer(invocation ->
                     Optional.ofNullable(records.get(invocation.getArgument(1))));
@@ -139,7 +151,7 @@ class NotificationServiceTest {
             when(sms.send(any(), any(), anyMap())).thenAnswer(invocation -> "SMS-" + UUID.randomUUID());
             when(whatsapp.send(any(), any(), anyMap())).thenAnswer(invocation -> "WA-" + UUID.randomUUID());
             service = new NotificationService(journeys, repository, sms, whatsapp, scheduler, strategy,
-                    Duration.ofSeconds(60), "https://ride.example/abc");
+                    Duration.ofSeconds(60), "https://ride.example/abc", trialMode);
         }
     }
 

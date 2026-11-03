@@ -29,7 +29,8 @@ public class NotificationService {
             @Qualifier("smsChannel") MessageChannel sms, @Qualifier("whatsappChannel") MessageChannel whatsapp,
             RetryScheduler scheduler, @Value("${notification.strategy:sms}") String strategy,
             @Value("${notification.fallback-timeout:60s}") Duration fallbackTimeout,
-            @Value("${notification.ride-link:}") String rideLink) {
+            @Value("${notification.ride-link:}") String rideLink,
+            @Value("${twilio.trial-mode:false}") boolean twilioTrialMode) {
         this.journeys = journeys;
         this.messages = messages;
         this.sms = sms;
@@ -38,6 +39,9 @@ public class NotificationService {
         this.strategy = NotificationStrategy.parse(strategy);
         this.fallbackTimeout = fallbackTimeout;
         this.rideLink = rideLink;
+        if (twilioTrialMode && this.strategy == NotificationStrategy.WHATSAPP_THEN_SMS) {
+            log.warn("TWILIO_TRIAL_MODE disables delivery status callbacks; whatsapp_then_sms will use the timer-based SMS fallback after {}. Use strategy 'both' to send both channels immediately.", fallbackTimeout);
+        }
     }
 
     @Transactional
@@ -63,6 +67,7 @@ public class NotificationService {
                             || dispatch.message().getStatus() == MessageDeliveryStatus.UNDELIVERED) {
                         sendSmsFallback(journey, body);
                     } else {
+                        // Trial-mode WhatsApp requests omit status callbacks, so this timer is the fallback signal.
                         scheduler.scheduleMessageFallback(journeyId, fallbackTimeout);
                     }
                 }

@@ -94,7 +94,7 @@ Common environment variables:
 |---|---|
 | `IVR_PROVIDER` | `fake` or `twilio`; default `fake`. |
 | `IVR_MAX_RETRIES` | `3` retries after the initial call. |
-| `IVR_SIGNATURE_VALIDATION_ENABLED` | `false` for fake providers; must be enabled when either Twilio provider is selected. |
+| `IVR_SIGNATURE_VALIDATION_ENABLED` | `false` for fake providers; enable it when using Twilio. Signed webhooks with invalid/missing signatures receive 403. |
 | `NOTIFICATION_PROVIDER` | `fake` or `twilio`; default `fake`. |
 | `NOTIFICATION_STRATEGY` | `sms`, `whatsapp`, `whatsapp_then_sms`, or `both`; default `sms`. |
 | `WHATSAPP_FALLBACK_TIMEOUT` | `60s` default before WhatsApp-to-SMS fallback. |
@@ -102,8 +102,9 @@ Common environment variables:
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | Twilio credentials; keep out of source control. |
 | `TWILIO_FROM_NUMBER`, `TWILIO_SMS_FROM`, `TWILIO_WHATSAPP_FROM` | Voice, SMS, and WhatsApp senders as applicable. |
 | `TWILIO_WHATSAPP_CONTENT_SID` | Optional approved WhatsApp template content SID. |
+| `TWILIO_TRIAL_MODE` | `true` omits optional Twilio callback and WhatsApp template parameters for trial accounts; default `false`. |
 | `SWAGGER_ENABLED` | Enables Swagger UI and OpenAPI docs; defaults to `true` for local development. Set to `false` in production if the docs should be hidden. |
-| `PUBLIC_BASE_URL` | Public application origin used for Twilio callbacks and signature validation. |
+| `PUBLIC_BASE_URL` | Public HTTPS origin of this application used for Twilio voice/status webhooks and signature validation. This is not a Twilio API URL. |
 
 For Cloud Tasks, activate the `gcp` profile and configure `GCP_PROJECT_ID`, `GCP_TASKS_LOCATION`, `GCP_TASKS_QUEUE`, `GCP_TASKS_INVOKER_SERVICE_ACCOUNT`, and `PUBLIC_BASE_URL`. See the [deployment guide](docs/deploy.md). For Twilio trial setup, WhatsApp sandbox, and manual checks, see [Twilio setup](docs/twilio-setup.md).
 
@@ -147,7 +148,7 @@ The provider-references endpoint returns the latest call SID and any SMS/WhatsAp
 
 ## Twilio webhooks
 
-Twilio callbacks are exposed under `/webhooks/twilio/`. Configure the public base URL in Twilio and in `PUBLIC_BASE_URL`; when Twilio is active, signature validation must be enabled. Important endpoints are `/voice`, `/gather`, `/status`, `/message-status`, and `/whatsapp/inbound`. Internal retry and fallback callbacks use `/internal/tasks/**`; see [deployment security notes](docs/deploy.md#6-deploy-and-verify) before exposing the service.
+Twilio callbacks are exposed under `/webhooks/twilio/`. The app passes its `/voice?journeyId=...` URL to Twilio when creating an outbound call; Twilio then fetches TwiML and posts keypad input to `/gather`. Configure `PUBLIC_BASE_URL` as the app's public HTTPS origin (for local development, the current ngrok origin), and enable signature validation. An unsigned manual REST Client request to `/voice` while validation is enabled is expected to return 403. If a real call is silent and logs show a rejected `/voice`, compare Twilio's Request Inspector URL with the configured origin and verify the runtime auth token belongs to the calling account/subaccount. See [Twilio setup and 403 troubleshooting](docs/twilio-setup.md#troubleshoot-a-403-or-a-silent-call). Other endpoints are `/status`, `/message-status`, and `/whatsapp/inbound`. Internal retry and fallback callbacks use `/internal/tasks/**`; see [deployment security notes](docs/deploy.md#6-deploy-and-verify) before exposing the service.
 
 ## Future work
 

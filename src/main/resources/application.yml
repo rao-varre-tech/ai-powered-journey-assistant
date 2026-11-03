@@ -33,6 +33,7 @@ twilio:
   sms-from: ${TWILIO_SMS_FROM:}
   whatsapp-from: ${TWILIO_WHATSAPP_FROM:}
   whatsapp-content-sid: ${TWILIO_WHATSAPP_CONTENT_SID:}
+  trial-mode: ${TWILIO_TRIAL_MODE:false}
   public-base-url: ${PUBLIC_BASE_URL:}
 gcp:
   tasks:

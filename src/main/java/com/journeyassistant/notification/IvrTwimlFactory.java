@@ -8,7 +8,7 @@ import com.twilio.twiml.voice.Say;
 import java.util.UUID;
 
 public class IvrTwimlFactory {
-    public static final String PROMPT = "You have reached your destination. Press 1 to get a ride link, press 2 to be called again in 5 minutes, press 3 to stop calls.";
+    public static final String PROMPT = "You have reached your destination. To receive your ride link, press 1. To receive a call back in five minutes, press 2. To stop receiving calls for this journey, press 3.";
 
     public String voicePrompt(UUID journeyId) {
         return new VoiceResponse.Builder()
