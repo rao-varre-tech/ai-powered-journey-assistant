@@ -35,7 +35,7 @@ class RetrySchedulingTest {
         when(attempt.getJourney().getId()).thenReturn(id);
         when(journey.getState()).thenReturn(JourneyState.CALLING);
         when(attempt.getInvalidDigitCount()).thenReturn(0);
-        IvrWebhookService service = new IvrWebhookService(journeys, attempts, new JourneyStateMachine(), new IvrTwimlFactory(),
+        IvrWebhookService service = new IvrWebhookService(journeys, attempts, new JourneyStateMachine(), new IvrTwimlFactory("https://journey.example.test"),
                 scheduler, mock(NotificationService.class), 3);
 
         String twiml = service.processDigit(id, "CA1", "2");

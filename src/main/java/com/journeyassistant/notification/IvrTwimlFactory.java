@@ -10,6 +10,12 @@ import java.util.UUID;
 public class IvrTwimlFactory {
     public static final String PROMPT = "You have reached your destination. To receive your ride link, press 1. To receive a call back in five minutes, press 2. To stop receiving calls for this journey, press 3.";
 
+    private final String publicBaseUrl;
+
+    public IvrTwimlFactory(String publicBaseUrl) {
+        this.publicBaseUrl = publicBaseUrl == null ? "" : publicBaseUrl.replaceAll("/$", "");
+    }
+
     public String voicePrompt(UUID journeyId) {
         return new VoiceResponse.Builder()
                 .gather(gather(journeyId, new Say.Builder(PROMPT).build()))
@@ -42,7 +48,8 @@ public class IvrTwimlFactory {
     }
 
     private Gather gather(UUID id, Say say) {
-        return new Gather.Builder().numDigits(1).timeout(8).action("/webhooks/twilio/gather?journeyId=" + id)
+        return new Gather.Builder().numDigits(1).timeout(8)
+                .action(publicBaseUrl + "/webhooks/twilio/gather?journeyId=" + id)
                 .method(HttpMethod.POST).say(say).build();
     }
 }

@@ -26,7 +26,7 @@ class TwilioWebhookControllerTest {
     private MockMvc mvc;
 
     @BeforeEach void setup() {
-        mvc = MockMvcBuilders.standaloneSetup(new TwilioWebhookController(new IvrTwimlFactory(),
+        mvc = MockMvcBuilders.standaloneSetup(new TwilioWebhookController(new IvrTwimlFactory("https://journey.example.test"),
                 mock(IvrWebhookService.class), mock(NotificationService.class),
                 new TwilioWebhookSignatureValidator(true, TOKEN, "https://journey.example"))).build();
     }

@@ -31,6 +31,7 @@ public class TwilioIvrClient implements IvrClient {
     public String placeCall(UUID journeyId, String toPhone) {
         URI voiceUrl = publicBaseUrl.resolve("/webhooks/twilio/voice?journeyId=" + journeyId);
         CallCreator creator = creatorFactory.create(toPhone, fromNumber, voiceUrl);
+        log.info("Twilio Voice webhook URL for journey {}: {}", journeyId, voiceUrl);
         if (!trialMode) {
             URI statusUrl = publicBaseUrl.resolve("/webhooks/twilio/status");
             creator.setStatusCallback(statusUrl)

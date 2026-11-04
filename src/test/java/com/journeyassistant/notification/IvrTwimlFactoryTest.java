@@ -5,13 +5,13 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IvrTwimlFactoryTest {
-    private final IvrTwimlFactory factory = new IvrTwimlFactory();
+    private final IvrTwimlFactory factory = new IvrTwimlFactory("https://journey.example.test");
     private final UUID id = UUID.fromString("77f98487-5c13-489e-8f18-d282a9e72d5a");
 
     @Test void voicePromptContainsGatherAndTimeoutFallback() {
         String xml = factory.voicePrompt(id);
         assertTrue(xml.contains("numDigits=\"1\"")); assertTrue(xml.contains("timeout=\"8\""));
-        assertTrue(xml.contains("/webhooks/twilio/gather?journeyId=" + id));
+        assertTrue(xml.contains("https://journey.example.test/webhooks/twilio/gather?journeyId=" + id));
         assertTrue(xml.contains(IvrTwimlFactory.PROMPT)); assertTrue(xml.contains("Goodbye."));
     }
 

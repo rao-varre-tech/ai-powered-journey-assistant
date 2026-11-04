@@ -29,7 +29,7 @@ class IvrWebhookServiceTest {
         when(journey.getId()).thenReturn(id);
         when(attempt.getLastProcessedDigit()).thenReturn("1");
         when(attempt.getInvalidDigitCount()).thenReturn(0);
-        IvrWebhookService service = new IvrWebhookService(journeys, attempts, new JourneyStateMachine(), new IvrTwimlFactory(),
+        IvrWebhookService service = new IvrWebhookService(journeys, attempts, new JourneyStateMachine(), new IvrTwimlFactory("https://journey.example.test"),
                 mock(RetryScheduler.class), mock(NotificationService.class), 3);
 
         String xml = service.processDigit(id, "CA123", "1");
@@ -57,7 +57,7 @@ class IvrWebhookServiceTest {
         when(journey.getId()).thenReturn(id);
         RetryScheduler scheduler = mock(RetryScheduler.class);
         IvrWebhookService service = new IvrWebhookService(journeys, attempts, new JourneyStateMachine(),
-                new IvrTwimlFactory(), scheduler, mock(NotificationService.class), 3);
+                new IvrTwimlFactory("https://journey.example.test"), scheduler, mock(NotificationService.class), 3);
 
         service.processDigit(id, "CALL-OLD", "2");
 

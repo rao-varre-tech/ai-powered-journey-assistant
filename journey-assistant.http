@@ -16,7 +16,7 @@ POST {{baseUrl}}/api/v1/journeys
 Content-Type: application/json
 
 {
-  "userPhone": "+919999999999",
+  "userPhone": "+917306079944",
   "destinationLatitude": 37.7749,
   "destinationLongitude": -122.4194,
   "geofenceRadiusMeters": 250,
